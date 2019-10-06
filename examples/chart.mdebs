@@ -1,0 +1,10 @@
+#
+# Chart of Accounts initialization file for MyCompany, Inc.
+#
+insert chart 011-00 "Intangible fixed assets"
+insert chart 211-00 "Petty Cash"
+insert chart 221-00 "Company Bank Account"
+insert chart 411-00 "Registered Capital"
+#
+# etc. etc. etc.
+#

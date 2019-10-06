@@ -1,0 +1,11 @@
+24 Jul 2000
+        Shortcut commands produce weird output when the shortcut table is
+        missing.
+
+        mdebs-> dump shortcut
+        Short cut table is empty
+        mdebs-> dump journal sho=PRE
+        Shortcut ->ð@ð@<- not found
+        mdebs-> dump journal sho=1
+        Shortcut ->1075125488<- not found
+

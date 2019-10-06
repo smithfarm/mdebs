@@ -1,0 +1,173 @@
+INSTALL file for mdebs
+----------------------
+
+This file contains instructions for installing mdebs.  Farther down,
+there's also a section explaining the distribution structure and some of
+the files, subdirectories, etc.
+
+
+  Installing PostgreSQL
+
+  Before you bother trying to do anything with mdebs, you have to
+  install PostgreSQL.  I recommend using a pre-packaged binary version
+  of PostgreSQL instead of building it from source, unless you are a
+  masochist or are trying to prove something.
+
+  As of this writing, the Author was using PostgreSQL version 6.1.  Use
+  earlier versions at your own risk!  Be sure to read the release notes
+  of whatever version you end up downloading.  Documentation is not one
+  of PostgreSQL's strong points, but it is there.  There's also a
+  Database HOWTO which covers PostgreSQL.
+
+  More information about PostgreSQL is available on
+  http://www.postgresql.org/
+
+
+  Building mdebs
+
+  A.  System Requirements
+
+  In order to build mdebs, you must have functional installations of
+  gcc, PostgreSQL (including developer stuff such as include files and
+  libraries), GNU make, and GNU readline.
+
+  Certain source code files are generated using bison and flex.  If you
+  need to regenerate these files (unlikely), you will of course have to
+  install these fine development tools as well.
+
+  The Author uses the Debian distribution, which contains packaged
+  binary versions of all of the above software, and much, much more.
+
+
+  B.  Build Procedure
+
+  Step 1. Make sure that the paths in the top-level Makefile point to
+  the correct locations of libpq-fe.h and libpq.so on your system.  On
+  mine, they're in /usr/include/postgresql and /usr/lib/postgresql/lib.
+  The Makefile in the distribution should work on Debian (e.g. 2.0, 2.1,
+  potato) using the postgresql and postgresql-dev Debian packages.  I'm not
+  sure about Red Hat, Slackware, or other distributions.
+
+  Step 2. Then type ``make''.  There should be no compiler warnings.
+  The mdebs binary will be generated in the top level directory.  You
+  may want to move it to /usr/local/bin.  The documentation will be made in
+  the ``doc'' subdirectory.  The documentation consists of manpage
+  (mdebs.7), an info file (mdebs.info), and two text versions of the info
+  file, one pretty and the other plain.  You have to install the manpage
+  and info file yourself.  If you don't know how or where to install them,
+  you should be able to view them by running the following commands from
+  the ``doc'' subdirectory:
+
+  	View manpage:
+		man -l mdebs.7
+
+	View info file:
+		info -f mdebs.info
+
+  C.  Setting Up Your Installation
+
+  After you successfully build mdebs, you'll need to do several things
+  before you run the mdebs binary.
+
+  To wit:
+
+     1. Make sure you or your users have the appropriate PostgreSQL
+	privileges.  Use the createuser command that comes with PostgreSQL
+	for this.  Another option is to always run mdebs as user postgres,
+	but this is probably not a good idea unless you're running a
+	single-user system.
+
+    2. Prepare an mdebs batch file with commands to enter your Chart of
+       Accounts into the database.  Use the chart.mdebs batchfile in the
+       ./examples directory as a model.  See also the section on mdebs
+       principles, below.  It is important to go over the batch file
+       carefully before running mdebs to make sure all of the lines in it
+       are either comments (starting with #) or valid mdebs INSERT CHART
+       commands.  Otherwise, mdebs will choke on them when dbinit is run
+       (see next item) and your database will not be properly initialized.
+
+    3. Use the dbinit script (in the tools directory of the mdebs source
+       distribution) to create and initialize an mdebs database and set up
+       its fiscal year and Chart of Accounts.  See the discussion of dbinit
+       in the Bash Scripts section, below, for details.
+
+    4. Assuming that you'll be using only one mdebs database at a time
+       (e.g., the current year's bookkeeping for your company), add a line
+       similar to export MDEBSDB="books1998" to your profile (I use
+       ~/.bash_profile).  mdebs also has a facility for specifying the
+       database on the command line.  Type mdebs -h for details.
+
+  D. Other remarks
+
+  After you've built mdebs, it's probably a good idea to copy the binary to
+  a directory somewhere in your PATH.  Note that some (all?) of the scripts
+  in the ./tools directory don't assume the binary is in the PATH and
+  require some user editing before being run.  See the ./tools directory
+  and the Shell Scripts section, below, for details.
+
+  E. Documentation
+
+  It's in the ``doc'' subdirectory.
+
+
+Structure of the mdebs Distribution
+
+  $MDEBSDIR (top-level directory of distribution)
+
+  This directory contains the ``guts'' of mdebs, to wit:
+
+    COPYING
+       The GNU General Public License, Version 2, under which mdebs is
+       distributed.
+
+    Makefile
+       The file used by GNU make to govern the build process.
+
+    README
+       A brief description of mdebs.
+
+    Files ending in the extensions .c and .h
+       C source code of mdebs
+
+    Files ending in the extensions .y and .yy
+       Bison parser and lexical analyzer source code
+
+    doc subdirectory
+       Directory containing the mdebs documentation (see below).
+
+    examples subdirectory
+       This subdirectory contains examples illustrating how mdebs can
+        be used in ``batch mode''.  One of the examples is a sample
+        Chart of Accounts initialization file intended for use with the
+        dbinit script, which is in the tools subdirectory.
+
+    lex.yy.c
+       Lexical scanner generated by flex from the mdebs.yy file.
+       Included in the distribution to reduce the number of software
+       packages that have to be installed in order to build mdebs.
+
+    mdebs
+       The mdebs binary.
+
+    y.tab.c and y.tab.h
+       C source code files generated by bison from the mdebs.y file.  This
+       and the file lex.yy.c are what `gcc' compiles to make the mdebs
+       command parser.
+
+    messages.h and messages-EN.h
+       Include file containing pre-processor directives that define the
+       text of various messages and output that may be generated by
+       mdebs from time to time.  Currently it contains the line
+		#include "messages-EN.h"
+       If there were messages-XX.h files for other languages, you could
+       choose one of them at compile time by changing the above line.
+
+    scratch subdirectory
+       Subdirectory containing junk files I haven't gotten up the courage
+       to delete yet.  (Hey, that might be useful someday!)
+
+    tools subdirectory
+       Subdirectory containing shell scripts for use in administering
+       mdebs.  See the discussion of the tools subdirectory, below.
+
+

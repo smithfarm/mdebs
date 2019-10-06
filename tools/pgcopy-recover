@@ -1,0 +1,54 @@
+Instructions for recovering an mdebs backed up using pgcopy-back
+================================================================
+
+I figured recovering a database is such a sensitive operation that writing
+a script to do it would be more trouble than it is worth.
+
+Ideally, we assume we are starting with a clean PostgreSQL installation.
+
+As user postgres, run createuser to make sure that the user(s) who will be
+running mdebs have access to PostgreSQL and can read/write databases.
+
+Make sure the MDEBSDIR and MDEBSDB environment variables are set correctly.
+The MDEBSDIR variable should point to the directory containing the mdebs
+binary (version 0.01) and the MDEBSDB variable should contain the name of
+the database to be recovered.
+
+As the user who will "own" the mdebs database(s) in question, run the
+dbinit-raw script in ./mdebs-0.01/tools
+This script will pick up the name of the database from MDEBSDB and run the
+mdebs binary in MDEBSDIR to initialize the database and set up the tables
+(empty for the time being).
+
+Then, unpack the pgcopyback-YYYYMMDD-HHMM.tar.gz file in a (preferably
+empty) directory.  To make things easier, run the following commands in
+that (empty) directory:
+
+$ mv *denik denik
+$ mv *descs descs
+$ mv *fiscyear fiscyear
+$ mv *osnova osnova
+$ mv *porad porad
+
+Then execute the following command (from inside the above directory, as the
+user who ran the dbinit-raw script):
+
+$ psql $MDEBSDB
+
+Once in psql, execute the following five commands:
+
+dbname=> \copy denik from denik
+dbname=> \copy descs from descs
+dbname=> \copy fiscyear from fiscyear
+dbname=> \copy osnova from osnova
+dbname=> \copy porad from porad
+dbname=> \q
+
+This should bring you back to your shell prompt.  From there, execute mdebs
+or mdebs -V and run a "dump chart" or "dump account XXX - YY" or other
+similar command to verify that the database has been properly recovered.
+
+That's all, folks!
+
+Nathan L. Cutler
+December 10, 1999

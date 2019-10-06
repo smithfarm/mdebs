@@ -1,0 +1,990 @@
+  The Minimalistic Double-Entry Bookkeeping System
+  Nathan L. Cutler
+  December 27, 1998
+  ____________________________________________________________
+
+  Table of Contents
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  1. Introduction
+
+     1.1 Version Number
+     1.2 Description
+     1.3 Copyright and Warranty Information
+     1.4 A Few Words from the Author
+     1.5 Stage of Development
+     1.6 Source and Binary Distributions
+
+  2. Getting Started
+
+     2.1 Obtaining the Newest Version
+     2.2 Installing PostgreSQL
+     2.3 Building mdebs
+        2.3.1 System Requirements
+        2.3.2 Build Procedure
+     2.4 Setting Up Your Installation
+     2.5 Installation
+
+  3. Running mdebs
+
+     3.1 Command Line Options
+     3.2 Environment Variables
+     3.3 Files
+        3.3.1 $MDEBSDIR (top-level directory of distribution)
+        3.3.2 $MDEBSDIR/doc/*
+        3.3.3 $MDEBSDIR/extras/*
+        3.3.4 $MDEBSDIR/tools/*
+           3.3.4.1 dbinit - Database (re)initialization script
+           3.3.4.2 pgcopy-backup
+           3.3.4.3 postgres-backup
+
+  4. Fundamental Principles
+
+     4.1 Dates
+     4.2 Accounts
+     4.3 Account Shortcuts
+     4.4 Monetary Amounts
+     4.5 Account Document Field
+     4.6 Chart of Accounts
+     4.7 Making Journal Entries
+
+  5. Command Syntax
+
+  6. Other Considerations
+
+     6.1 Making Backups
+     6.2 Making Bug Reports
+     6.3 Tweaking for Speed
+     6.4 Translating mdebs into Other Languages
+
+  7. Data Structures
+
+     7.1 fiscyear - Fiscal Year Table
+     7.2 osnova - Chart of Accounts Table
+     7.3 descs - Journal Entry Descriptions Table
+     7.4 porad - Journal Entry Serial Number Table
+     7.5 denik - Journal Entry Accounts and Amounts Table
+
+
+  ______________________________________________________________________
+
+  1.  Introduction
+
+
+
+  1.1.  Version Number
+
+  When this documentation was written, the current mdebs version was
+  0.04.
+
+
+  1.2.  Description
+
+  The Minimalistic Double-Entry Bookkeeping System (mdebs) is a program
+  whose goal is to provide a solution for those who need to do double-
+  entry bookkeeping under Linux.
+
+  mdebs is a program written in ANSI C, supported by some shell scripts
+  running under bash, and a database implemented using the PostgreSQL
+  (see http://www.postgresql.org/) backend.
+
+
+  1.3.  Copyright and Warranty Information
+
+  The mdebs program and this documentation is Copyright (C) 1997,1998 by
+  Nathan L. Cutler (the ``Author'').
+
+  The Author has released mdebs under the terms of the GNU General
+  Public License (GPL), Version 2.  A copy of the GPL is provided in the
+  top-level directory of the source code distribution in the file
+  ``COPYING''.
+
+  If you modify mdebs (read the Gnu General Public License before doing
+  so), please document your modifications in file separate from this
+  documentation.
+
+  This program is distributed in the hope that it will be useful, but
+  WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+  General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with this program;  if not, write to the Free Software
+  Foundation, Inc., 675 Mass Ave., Cambridge, MA 02139, USA.
+
+
+  1.4.  A Few Words from the Author
+
+  I decided to write mdebs because I couldn't find any free software
+  that did double-entry bookkeeping.  The philosophy of mdebs is to keep
+  things simple; hence the word ``Minimalistic'' in the title.
+
+  Being ``minimalistic'', mdebs does only those tasks that its author
+  considers essential to double-entry bookkeeping.  With mdebs, you can
+  set up a Chart of Accounts, make and browse journal entries, and
+  review movements on any account over a specified time period.
+
+  mdebs is designed to be able to be run in "batch mode", taking
+  commands from standard input.  This means you can write scripts to do
+  some of the work for you.  Theoretically, mdebs could be used as a
+  back-end or engine for some kind of GUI-based bookkeeping program.
+
+
+  1.5.  Stage of Development
+
+  While mdebs is referred to as ``alpha'' software, you should feel free
+  to try it out and send your comments and constructive criticism to the
+  author, who will be glad to know that someone is using his program.
+
+
+
+  1.6.  Source and Binary Distributions
+
+  Currently, mdebs is only available in a source-code distribution.  If
+  you think I should make a binary distribution available, please let me
+  know.  If you would like to package mdebs for a popular Linux
+  distribution, please go ahead.  I will try to provide any necessary
+  assistance, but make no promises.
+
+
+  2.  Getting Started
+
+  2.1.  Obtaining the Newest Version
+
+  The newest release of mdebs is available on
+  http://web.iol.cz/livingston/mdebs/
+
+
+  2.2.  Installing PostgreSQL
+
+  Before you bother trying to do anything with mdebs, you have to
+  install PostgreSQL.  I recommend using a pre-packaged binary version
+  of PostgreSQL instead of building it from source, unless you are a
+  masochist or are trying to prove something.
+
+  As of this writing, the Author was using PostgreSQL version 6.1.  Use
+  earlier versions at your own risk!  Be sure to read the release notes
+  of whatever version you end up downloading.  Documentation is not one
+  of PostgreSQL's strong points, but it is there.  There's also a
+  Database HOWTO which covers PostgreSQL.
+
+  More information about PostgreSQL is available on
+  http://www.postgresql.org/
+
+
+  2.3.  Building mdebs
+
+  2.3.1.  System Requirements
+
+  In order to build mdebs, you must have functional installations of
+  gcc, PostgreSQL (including developer stuff such as include files and
+  libraries), GNU make, and GNU readline.
+
+  Certain source code files are generated using bison and flex.  If you
+  need to regenerate these files (unlikely), you will of course have to
+  install these fine development tools as well.
+
+  The Author uses the Debian distribution, which contains packaged
+  binary versions of all of the above software, and much, much more.
+
+
+  2.3.2.  Build Procedure
+
+  Step 1. Make sure that the paths in the top-level Makefile point to
+  the correct locations of libpq-fe.h and libpq.so on your system.  On
+  mine, they're in /usr/include/postgresql and /usr/lib/postgresql/lib.
+  The Makefile in the distribution should work on Debian 2.0 and higher
+  systems using the postgresql and postgresql-dev Debian packages.  I'm
+  not sure about Red Hat, Slackware, or other distributions.
+
+
+  Step 2. Then type ``make''.  There should be no compiler warnings.
+  The mdebs binary will be generated in the top level directory.  You
+  may want to move it to /usr/local/bin.  No man pages are provided.
+  This document is the only documentation there is at this point.
+
+
+  2.4.  Setting Up Your Installation
+
+  After you successfully build mdebs, you'll need to do several things
+  before you run the mdebs binary.
+
+
+  To wit:
+
+
+  1. Make sure you or your users have the appropriate PostgreSQL
+     privileges.  Use the createuser command that comes with PostgreSQL
+     for this.  Another option is to always run mdebs as user postgres,
+     but this is probably not a good idea unless you're running a
+     single-user system.
+
+  2. Prepare an mdebs batch file with commands to enter your Chart of
+     Accounts into the database.  Use the chart.mdebs batchfile in the
+     ./examples directory as a model.  See also the section on mdebs
+     principles, below.  It is important to go over the batch file
+     carefully before running mdebs to make sure all of the lines in it
+     are either comments (starting with #) or valid mdebs INSERT CHART
+     commands.  Otherwise, mdebs will choke on them when dbinit is run
+     (see next item) and your database will not be properly initialized.
+
+  3. Use the dbinit script (in the tools directory of the mdebs source
+     distribution) to create and initialize an mdebs database and set up
+     its fiscal year and Chart of Accounts.  See the discussion of
+     dbinit in the Bash Scripts section, below, for details.
+
+  4. Assuming that you'll be using only one mdebs database at a time
+     (e.g., the current year's bookkeeping for your company), add a line
+     similar to export MDEBSDB="books1998" to your profile (I use
+     ~/.bash_profile).  mdebs also has a facility for specifying the
+     database on the command line.  Type mdebs -h for details.
+
+
+  2.5.  Installation
+
+  After you've built mdebs, the next step is to install it.  You can do
+  that by copying the binary to a directory somewhere in your PATH.
+  Note that some (all?) of the scripts in the ./tools directory don't
+  assume the binary is in the PATH and require some user editing before
+  being run.  See the ./tools directory and the Shell Scripts section,
+  below, for details.
+
+  An integral part of installation is installing the documentation.  At
+  this time there is no man page, because this documentation is being
+  written on an old version of sgml-tools that has a broken man page
+  generator.  The file ./doc/mdebs.sgml is the source code for this
+  documentation and ./doc/mdebs.txt is the resulting output.  For best
+  viewing results, use less.  A "stripped" version, with no bolding or
+  underlining, is also included.  I've also left the dvi and html
+  versions generated by sgml-tools, in the hope they will be useful.
+
+
+  3.  Running mdebs
+
+  mdebs comes with a number of command line options and environment
+  variables to influence how mdebs behaves when it is run.  Some of the
+  command line options (the ones without short equivalents) are intended
+  for use from bash scripts and the like and do not produce any output.
+
+
+
+
+
+  3.1.  Command Line Options
+
+  The mdebs command line looks like this:
+
+
+
+       mdebs [options]
+
+
+
+
+  where [options] can be one or more of the following:
+
+
+     --help|-h
+        Print out a helpful message.
+
+      --version|-v
+        Version information.
+
+     --prompt|-p (arg)
+        Sets prompt for mdebs to use
+
+     --verbose|-V
+        Instructs mdebs to be more verbose.  This has the effect of
+        displaying "mdebs_msg" priority messages and can generally be
+        considered useful.
+
+     --db|-D (arg)
+        Instructs mdebs to use a database different than MDEBSDB
+
+     --validate (arg)
+        (Intended for use from shell scripts) Instructs mdebs to check a
+        string to see whether it constitutes a valid YYYYMMDD format
+        date.
+
+     --initialize
+        (Intended for use from shell scripts) Instructs mdebs to set up
+        a table structure in the database pointed to by MDEBSDB, which
+        is assumed to be empty.
+
+     --existdb (arg)
+        (Intended for use from shell scripts) Determine if a database
+        exists
+
+
+  3.2.  Environment Variables
+
+
+     MDEBSDB
+        Database to use when mdebs is invoked.
+
+     PAGER
+        Pager to invoke when browsing query results.
+
+     HOME
+        Full path of the user's home directory.
+
+     TMPDIR
+        Where to store temporary files.
+
+     MDEBSDIR
+        Full path of the mdebs installation (src) directory.
+
+
+
+  3.3.  Files
+
+  3.3.1.  $MDEBSDIR (top-level directory of distribution)
+
+  This directory contains the ``guts'' of mdebs, to wit:
+
+     GPL
+        The GNU General Public License, Version 2, under which mdebs is
+        distributed.
+
+     Makefile
+        The file used by GNU make to govern the build process.
+
+     README
+        A brief description of mdebs.
+
+     dbinit.c and dbinit.h
+        C source code of the function(s) for initializing new databases.
+        Contains the SQL CREATE TABLE queries.
+
+     delete.c and delete.h
+        C source code of functions used to delete mdebs objects such as
+        Chart of Accounts entries, journal entries, etc.
+
+     doc subdirectory
+        Directory containing the mdebs documentation (see below).
+
+     dump.c and dump.h
+        C source code of functions used to generate mdebs ``reports'',
+        i.e. lists of accounts, journal entries, etc.
+
+     enviro.c and enviro.h
+        C source code of functions used to query and manipulate
+        environment variables, mainly MDEBSDB.  This allows the user to
+        dynamically change from one database to another without exiting
+        mdebs.
+
+     examples subdirectory
+        This subdirectory contains examples illustrating how mdebs can
+        be used in ``batch mode''.  One of the examples is a sample
+        Chart of Accounts initialization file intended for use with the
+        dbinit script, which is in the tools subdirectory.
+
+     extras subdirectory
+        Examples of how mdebs can be used as a ``back-end'' to shell
+        scripts to ease the process of journal entry.  These examples
+        assume you have dialog installed.  [Anything else in here?]
+
+     generalized.c and generalized.h
+        As their names would suggest, these files contain ``library''
+        functions that are used throughout mdebs to do things like check
+        date formats, etc.
+
+     insert.c and insert.h
+        C source code of functions used to insert all types of mdebs
+        data objects except journal entries.
+
+     journal.c and journal.h
+        C source code of functions dealing with journal entries.
+
+     lex.yy.c
+        Lexical scanner created by flex from the mdebs.yy file.
+        Included in the distribution to reduce the number of software
+        packages that have to be installed in order to build mdebs.
+
+
+     mdebs
+        The mdebs binary.
+
+     mdebs.h
+        Include file containing declarations and pre-processor
+        directives intended to be global to all mdebs functions.
+
+     mdebs.tab.c and mdebs.tab.h
+        C source code files generated by bison from the mdebs.y file.
+        This is where the main() function is located.  This is where
+        command-line parameters get processed, user input gets parsed,
+        etc.
+
+     mdebs.y and mdebs.yy
+        Files containing source intended for processing by bison and
+        flex, respectively.  These files define how the parsing engine
+        behaves.
+
+     messages-EN.h file and messages.h symbolic link
+        Include file containing pre-processor directives that define the
+        text of various messages and output that may be generated by
+        mdebs from time to time.  See the section ``Translating mdebs
+        into other languages'', below.
+
+     messages.c
+        C source code of functions used to ``say'' things to the user.
+        This is to be distinguished from the code used to generate
+        ``reports'' (account listings, journal listings, etc.)  The
+        format of these listings and their column headings are hardwired
+        for the time being.  See the section ``Translating mdebs into
+        other languages'', below.
+
+     pgresfunc.c and pgresfunc.h
+        C source code of functions used to communicate with the
+        PostgreSQL back-end.
+
+     query.c and query.h
+        C source code of functions used to process mdebs commands that
+        start with QUERY.
+
+     scratch subdirectory
+        Subdirectory containing junk files I haven't gotten up the
+        courage to delete yet.  (Hey, that might be useful someday!)
+
+     tokenlen.h
+        Include file used in mdebs.y and mdebs.yy.  Something to do with
+        the parser.
+
+     tools subdirectory
+        Subdirectory containing shell scripts for use in administering
+        mdebs.  See the discussion of the tools subdirectory, below.
+
+
+  3.3.2.  $MDEBSDIR/doc/*
+
+  Files that, taken as a whole, constitute the documentation to mdebs.
+
+
+     File 1
+
+     File 2, etc.
+
+
+
+
+
+  3.3.3.  $MDEBSDIR/extras/*
+
+  Various goodies.
+
+
+     File 1
+
+     File 2, etc.
+
+
+  3.3.4.  $MDEBSDIR/tools/*
+
+  Shell scripts for use in administering mdebs.  I'll sacrifice the
+  structural purity of this document and put the documentation to these
+  scripts here.
+
+
+  3.3.4.1.  dbinit - Database (re)initialization script
+
+  Like mdebs itself, dbinit gets the name of the database to be
+  initialized from the MDEBSDB environment variable.  The algorithm that
+  dbinit uses can be summarized as follows:
+
+
+  1. If MDEBSDB enviro-variable is defined, ask user if s/he wants to
+     use this as the database to be (re)initialized; if not, ask user
+     for different database name
+
+  2. Get fiscal year starting and ending dates from user
+
+  3. Get path and filename of file containing commands for initializing
+     the Chart of Accounts
+
+  4. If database already exists, ask for user confirmation before
+     destroying it
+
+  5. (Re)create the database
+
+  6. Set up the fiscal year of the database
+
+  7. Set up the initial Chart of Accounts (both the fiscal year and the
+     Chart of Accounts can be changed at will later)
+
+
+  Using dbinit, you can set up as many mdebs databases as you like.
+  Each database covers one fiscal year, or, more precisely, the time
+  between the beginning and ending dates specified as arguments to the
+  dbinit script when the database was initialized.
+
+
+  Be careful with dbinit.  I've made an effort to make the script be
+  careful and warn the user if an existing database is specified, but it
+  only asks once... So keep in mind that you could reinitialize (read
+  lose) a database with real data if you're not careful.
+
+
+  [This would be a good place for a pointer to a section describing how
+  to back up mdebs databases, including instructions on how to restore
+  them from backups.]
+
+
+  Before you first run dbinit, you'll have to edit the script to make
+  sure the MDEBSDIR variable points to the directory containing the
+  mdebs binary.  Read the comments at the beginning of the file; it
+  should be fairly self-explanatory.
+
+  3.3.4.2.  pgcopy-backup
+
+  Description of the pgcopy-backup script.
+
+
+  3.3.4.3.  postgres-backup
+
+  Description of teh postgres-backup script.
+
+
+
+  4.  Fundamental Principles
+
+  4.1.  Dates
+
+  Dates must always be specified in the format YYYYMMDD.  That means
+  19980101 is January 1, 1998 and 19981231 is December 31, 1998.  Don't
+  even think of asking me to change this.
+
+
+  4.2.  Accounts
+
+  Accounts are referred to as [major-number] [space] [hyphen] [minor-
+  number].  The major number is a three-digit numeric string (000-999)
+  and the minor number is a two-digit numeric string (00-99).  You can
+  use an asterisk (``*'') instead of the minor number in some cases to
+  refer to all accounts with a particular major number.  Examples of
+  valid account numbers are
+
+
+
+       010 - 01
+       910 - 00
+       222 - *
+
+
+
+
+
+  The above needs to be changed to [major-number][hyphen][major-number]
+  by revising the lexical rules, the bison mdebs.y file, and
+  implementing functions to parse the major and minor numbers out of the
+  string.  All 222 accounts could be specified either as "222-" or
+  "222-*".
+
+
+  4.3.  Account Shortcuts
+
+  Need to write code and change table structure to enable use of
+  "Account Shortcuts", i.e. a VARCHAR-type account identification field
+  to provide: (a) an alternate account naming scheme that's more
+  flexible and user-friendly than the major-minor number scheme, which
+  is taken from Czech Republic accounting legislation, and (b) a way to
+  allow the user to group items together without making exceptions to
+  the major-minor numbers; this would be useful, for example, to a
+  manager who wants to monitor the costliness of a project.  Just set up
+  an Account Shortcut for the project (call it "PROJ1") and include that
+  in all entries related to the project. Then run a DUMP SHORTCUT PROJ1
+  command in mdebs.
+
+  The shortcuts code has to make sure that the shortcut is optional.
+
+
+
+
+
+  4.4.  Monetary Amounts
+
+  mdebs assumes that all monetary amounts will be entered in a currency
+  that can be broken down into 100 smaller units (i.e. dollars/cents,
+  pounds/pence, marks/pfennigs, korunas/hellers, etc.).  It further
+  assumes that monetary amounts will be entered as integers in the
+  smaller units.  If you're keeping your books in dollars, this means
+  you must enter all amounts in cents.  Thus, for mdebs 100 means one
+  dollar, 101 means $1.01, etc.  When mdebs prints out information, it
+  puts in the decimal point, but it won't accept decimal input.  This
+  can be confusing at first.
+
+
+  4.5.  Account Document Field
+
+
+
+       [Need to implement and document; should be fairly straightforward.]
+
+
+
+
+
+  4.6.  Chart of Accounts
+
+  If you're interested in using mdebs, you either already know all about
+  double-entry bookkeeping and already have a Chart of Accounts for your
+  company, in which case it's just a matter of converting your account
+  number scheme to use the mdebs convention (see above), or you figure
+  you're going to use mdebs to learn about double-entry bookkeeping, in
+  which case you can easily use the example Chart of Accounts provided
+  in the chart.mdebs batchfile in the examples directory of the source
+  distribution.
+
+
+
+       [Talk about using Account Shortcuts as an alternate or supplemental account
+       specification system.]
+
+
+
+
+
+  4.7.  Making Journal Entries
+
+  When you run mdebs from the shell prompt with the MDEBSDB environment
+  variable pointing to an initialized mdebs database, you are presented
+  with an mdebs prompt.  At this prompt you can either enter an mdebs
+  command (see section on Command Syntax, below), or begin a journal
+  entry.
+
+
+  Journal entries consist of a first line, containing the date and
+  description of the journal entry in the format YYYYMMDD "text" (the
+  quotes are necessary if the description is to consist of more than one
+  word), and at least two lines describing movements on various
+  accounts.  For example, if your company issues an invoice for services
+  rendered, you might make a journal entry called "Invoice for services
+  rendered" with a debit entry to Accounts Receivable and a credit entry
+  to Revenues.  Assuming that ``311 - 00'' is your Accounts Receivable
+  account and ``518 - 00'' is your Revenues account, your journal entry
+  might look something like this:
+
+
+
+
+  mdebs-> 19980101 "Invoice for services rendered"
+  mdebs-> 311 - 00 12100 0
+  mdebs-> 518 - 00 0 12100
+  mdebs->
+
+
+
+
+
+  The ending newline signals mdebs the end of the journal entry.  If the
+  journal entry passes the various checks (valid date, existing
+  accounts, and balanced debit/credit sides), mdebs will insert the
+  entry into the database.
+
+
+  Journal entries can be more complicated.  For example, in some parts
+  of the world, companies have to charge VAT on their invoices.
+  Assuming a VAT rate of 5% and assuming the appropriate VAT account is
+  ``343 - 01'', the above journal entry might look like this:
+
+
+
+       mdebs-> 19980101 "Invoice for services rendered"
+       mdebs-> 311 - 00 12100 0
+       mdebs-> 343 - 01 0 576
+       mdebs-> 518 - 00 0 11524
+       mdebs->
+
+
+
+
+
+  Take extra special care to avoid making duplicate journal entries.  My
+  method for avoiding this is to keep accounting documents (invoices,
+  receipts, etc.) in a pile until I sit down to do bookkeeping.  As I
+  make journal entries for each accounting document, I put them in a
+  binder.  This helps keep the paper documentation in line with the
+  books in the computer.
+
+
+  5.  Command Syntax
+
+  mdebs commands consist of three components: "verb" (e.g., DUMP, QUERY,
+  INSERT) indicating what type of operation to perform, an "object"
+  (e.g., JOURNAL, CHART, ACCOUNT) indicating the type of data to be used
+  in the operation, and "the rest", which varies from case to case
+  (could be a range of dates for a DUMP command, or data to be inserted
+  in the case of an INSERT).
+
+
+  Commands are to be distinguished from journal entries, which are
+  complex and use a completely different syntax.  Commands are always
+  entered on a single line, whereas journal entries take up several
+  lines.  Journal entries are discussed in the Fundamental Principles
+  section, above.
+
+
+  DUMP
+
+
+  These commands generate ("dump") reports, or lists, of accounting
+  data.
+
+
+  DUMP CHART
+
+  Lists the Chart of Accounts.
+
+
+  The command takes no arguments.  Its output is a table describing the
+  Chart of Accounts for the current database.
+
+
+  DUMP ACCOUNT
+
+
+  Generates a report giving movements on an account over a specified
+  time period.
+
+
+  The command takes an account number (or shortcut) argument and an
+  optional date range.  If no date range is specified, the entire fiscal
+  year is assumed.  The command's output is a table containing all
+  movements on the given account during the period specified.  At the
+  end, debit and credit totals are written.  This program can be useful
+  in monthly, quarterly, and annual closings, VAT closings, etc.  If the
+  beginning and ending dates are the same, it prints out all movements
+  for a particular day.
+
+
+  A series of DUMP ACCOUNT commands could be used to print out a General
+  Ledger for any given period.
+
+
+  DUMP JOURNAL (see QUERY JOURNAL)
+
+
+  Dumps the journal (book of original entry) for specified date range.
+
+
+  QUERY
+
+
+  These commands generally output a single item, or are used to
+  determine whether something exists or not.
+
+
+  QUERY JOURNAL [date] [ser_num]
+
+
+  Given a date and serial number of a particular journal entry, this
+  command outputs the journal entry as it might look in an actual
+  journal.  This command can be used in conjunction with DUMP ACCOUNT to
+  analyze account movements.
+
+
+  [Various shell scripts for making journal entries]
+
+  These shell scripts use the dialog program in an attempt to provide a
+  user-friendly way to enter journal entries into datafiles.  Just
+  choose the type of journal entry you want to make, provide the correct
+  information, and the script runs mdebs for you.
+
+
+  6.  Other Considerations
+
+  6.1.  Making Backups
+
+  After you have used mdebs for some time (say, a month or two), you'll
+  probably want to start making backups of your data.
+
+
+  6.2.  Making Bug Reports
+
+  Send bug reports to the Author.
+
+
+  6.3.  Tweaking for Speed
+
+  You may find mdebs a bit slow.  One possible reaons is that it uses
+  relational SQL queries that take time for the PostgreSQL back-end to
+  process.  Another possible reason is that you have no indices.
+
+
+
+       [ Section on creating and updating indices? ]
+       [ What indices are most useful? ]
+       [ How fast is mdebs on the author's system? ]
+
+
+
+
+
+  6.4.  Translating mdebs into Other Languages
+
+  The Author has made an attempt to ``facilitate'' the translation of
+  mdebs into other languages.  Messages are divided into three priority
+  levels:  Error, Result, and Message.  When mdebs is run in ``quiet''
+  mode (without the --verbose switch), Message-priority messages are
+  suppressed.  Error messages and Results (i.e., messages produced in
+  response to a user command) are never suppressed.  Each message is
+  defined using a pre-processor directive, as opposed to appearing
+  embedded in the guts of the code.  To translate mdebs to another
+  language, copy messages-EN.h to a file such as messages-CZ.h (for the
+  Czech language, for instance), translate the text of all the messages,
+  change the messages.h symbolic link to point to messages-CZ.h, and
+  rebuild mdebs.
+
+  This is an interim solution; I should be using i18n message catalogs
+  but I haven't gotten around to that yet.
+
+
+  7.  Data Structures
+
+  7.1.  fiscyear - Fiscal Year Table
+
+  The table fiscyear defines the fiscal year.  The field startd is the
+  starting date, and endd is the ending date.
+
+
+  o  startd (DATE)
+
+  o  endd (DATE)
+
+
+  7.2.  osnova - Chart of Accounts Table
+
+  The table osnova defines the Chart of Accounts.  acct is the account's
+  code (up to three characters), anal is a two-character sub-account
+  (``analytical'') code, and desig is a description of the account.
+
+
+  o  acct (CHAR(3))
+
+  o  anal (CHAR(2))
+
+  o  desig (VARCHAR(60))
+
+  7.3.  descs - Journal Entry Descriptions Table
+
+  The table descs holds the journal entries, and contains the fields
+  ent_date (Entry Date) and por_cislo (Serial Number), which together
+  constitute a link to the denik (Journal) table.  In addition, descs
+  contains a field desig, which describes the journal entry.
+
+
+  o  ent_date (DATE)
+
+  o  por_cislo (INT)
+
+  o  desig (VARCHAR(80))
+
+
+  7.4.  porad - Journal Entry Serial Number Table
+
+  The table porad (Serial) is a funny little table made necessary by the
+  relationship between the tables descs and denik (Journal).  When
+  journal entries are being added to the database the program has to be
+  able to determine the last serial number used for a particular day.
+  It does so by looking up the value of max_cislo (Maximum Number) for
+  the particular day in this table.
+
+
+  o  ent_date (DATE)
+
+  o  max_cislo (INT)
+
+
+  7.5.  denik - Journal Entry Accounts and Amounts Table
+
+  Last, but certainly not least, is the table denik (Journal), which
+  contains fields describing a journal entry.  The ent_date and
+  por_cislo (Serial Number) fields point to the descs table.  The
+  [m]d_acct (Debit/Credit Major Number) and [m]d_anal (Debit/Credit
+  Minor Number) fields point to the osnova (Chart) table (in other
+  words, the latter contain account numbers for debit and credit
+  amounts).  The [m]d_amt (Debit/Credit Amount) fields contain debit and
+  credit amounts.  Amounts are represented as integers in the database.
+  When asked to display movements on accounts, mdebs will display the
+  amounts with a decimal point, but this is just a cosmetic feature for
+  user comfort.  Each record is like one line of a journal entry; either
+  the debit or the credit side will be zero.  When all entries matching
+  a certain date and serial number are added together, the debit and
+  credit sides must be equal.
+
+
+  o  ent_date (DATE)
+
+  o  por_cislo (INT)
+
+  o  md_acct (CHAR(3))
+
+  o  md_anal (CHAR(2))
+
+  o  md_amt (INT)
+
+  o  d_acct (CHAR(3))
+
+  o  d_anal (CHAR(2))
+
+  o  d_amt (INT)
+
+
+

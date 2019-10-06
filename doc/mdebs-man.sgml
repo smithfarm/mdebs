@@ -1,0 +1,515 @@
+<!doctype linuxdoc system>
+
+<!-- This is the SGML source to the English version of the mdebs
+     manual, Copyright (C) 1997,1998 Nathan L. Cutler.
+ -->
+
+<manpage title="Mdebs" sectnum="1">
+
+<!--
+<title>
+mdebs - The Minimalistic Double-Entry Bookkeeping System
+</title>
+<author>
+Nathan L. Cutler
+</author>
+-->
+
+<sect1>NAME
+<p>
+mdebs - The Minimalistic Double-Entry Bookkeeping System
+
+<sect1>SYNOPSIS
+<p>
+<em/mdebs/ options
+
+<sect1>COPYRIGHT
+<p>
+The <em/mdebs/ program and this documentation is Copyright (C) 1997-1999 by
+Nathan L. Cutler (the ``Author'').
+
+The Author has released <em/mdebs/ under the terms of the GNU General
+Public License (GPL), Version 2.  A copy of the GPL is provided in the
+top-level directory of the source code distribution in the file ``GPL''.
+
+If you modify <em/mdebs/ (read the Gnu General Public License before doing so),
+please document your modifications in file separate from this documentation.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program;  if not, write to the Free Software
+Foundation, Inc., 675 Mass Ave., Cambridge, MA 02139, USA.
+
+<sect1>DESCRIPTION
+<p>
+Mdebs is a program whose goal is to provide a solution for those who need to
+do double-entry bookkeeping under Linux.
+
+<sect1>OPTIONS
+<p>
+<descrip>
+<tag>--help OR -h 
+<p>
+Print out a helpful message.
+<tag> --version OR -v 
+<p>
+Version information.
+<tag>--prompt OR -p (arg)
+<p>
+Sets prompt for mdebs to use
+<tag>--verbose OR -V 
+<p>
+Instructs mdebs to be more verbose.  This has the effect of displaying
+"mdebs_msg" priority messages and can generally be considered useful.
+<tag>--db OR -D (arg)
+<p>
+Instructs mdebs to use a database different than MDEBSDB
+<tag>--validate (arg)
+<p>
+(Intended for use from shell scripts) Instructs mdebs to check a string to see
+whether it constitutes a valid YYYYMMDD format date.
+<tag>--initialize 
+<p>
+(Intended for use from shell scripts) Instructs mdebs to set up a table
+structure in the database pointed to by MDEBSDB, which is assumed to be empty.
+<tag>--existdb (arg)
+<p>
+(Intended for use from shell scripts) Determine if a database exists
+</descrip>
+
+<sect1>ENVIRONMENT
+<p>
+<descrip>
+<tag>MDEBSDB
+<p>
+Database to use when mdebs is invoked.
+<tag>PAGER
+<p>
+Pager to invoke when browsing query results.
+<tag>HOME
+<p>
+Full path of the user's home directory.
+<tag>MDEBSDIR
+<p>
+Full path of the mdebs installation (src) directory.
+</descrip>
+
+<sect1>FILES
+<p>
+<descrip>
+<tag>$MDEBSDIR/tools/*
+<p>
+Shell scripts for use in administering mdebs
+<tag>$MDEBSDIR/mdebs
+<p>
+The mdebs binary.
+<tag>$MDEBSDIR/extras/*
+<p>
+Various goodies.
+</descrip>
+
+<sect1>INTRODUCTION
+
+<p>
+The goal of <em/mdebs/ is to provide a solution for those who need to do
+double-entry bookkeeping under Linux.
+
+<sect1>Fundamental Principles
+
+<p> <em/Dates/
+
+<p>
+Dates must always be specified in the format <em/YYYYMMDD/.  That means
+19980101 is January 1, 1998 and 19981231 is December 31, 1998.  Don't even
+think of asking me to change this.
+
+<p> <em/Accounts/
+
+<p>
+Accounts are referred to as <em/[major-number]-[minor-number]/.
+The major number is a three-digit numeric string (000-999) and the minor
+number is a two-digit numeric string (00-99).  You can use an asterisk (``*'')
+instead of the minor number in some cases to refer to all accounts with a
+particular major number.  Examples of valid account numbers are 
+
+<tscreen><verb>
+010-01
+910-00
+222-*
+</verb></tscreen>
+
+<p> <em/Account Shortcuts/
+
+<p>
+An "Account Shortcut" is a VARCHAR-type account identification field to
+provide: (a) an alternate account naming scheme that's more flexible and
+user-friendly than the major-minor number scheme, which is taken from Czech
+Republic accounting legislation, and (b) a way to allow the user to group
+items together without making exceptions to the major-minor numbers; this
+would be useful, for example, to a manager who wants to monitor the
+costliness of a project.  Just set up an Account Shortcut for the project
+(call it "PROJ1") and include that in all entries related to the project.
+Then run a DUMP JOURNAL SHO= PROJ1 command in <em/mdebs/ to see all the
+journal entries related to that project.
+
+<p> <em/Monetary Amounts/
+
+<p>
+<em/mdebs/ assumes that all monetary amounts will be entered in a currency
+that can be broken down into 100 smaller units (i.e. dollars/cents,
+pounds/pence, marks/pfennigs, korunas/hellers, etc.).  It further assumes that
+monetary amounts will be entered as integers in the smaller units.  If you're
+keeping your books in dollars, this means you must enter all amounts in cents.
+Thus, for <em/mdebs/ 100 means one dollar, 101 means $1.01, etc.  When
+<em/mdebs/ prints out information, it puts in the decimal point, but it won't
+accept decimal input.  This can be confusing at first.
+
+<p> <em/Account Document Field/
+
+<p>
+[Need to implement and document; should be fairly straightforward.]
+
+<p> <em/The Chart of Accounts/
+
+<p>
+If you're interested in using <em/mdebs/, you either already know all about
+double-entry bookkeeping and already have a Chart of Accounts for your
+company, in which case it's just a matter of converting your account number
+scheme to use the <em/mdebs/ convention (see above), or you figure you're
+going to use <em/mdebs/ to learn about double-entry bookkeeping, in which case
+you can easily use the example Chart of Accounts provided in the
+<em/chart.mdebs/ batchfile in the <em/examples/ directory of the source
+distribution.
+
+<p>
+[Talk about using Account Shortcuts as an alternate or supplemental account
+specification system.]
+
+<p> <em/Making Journal Entries/
+
+<p>
+When you run <em/mdebs/ from the shell prompt with the <em/MDEBSDB/ environment
+variable pointing to an initialized <em/mdebs/ database, you are presented
+with an <em/mdebs/ prompt.  At this prompt you can either enter an <em/mdebs/
+command (see section on Command Syntax, below), or begin a journal entry.
+
+<p>
+Journal entries consist of a first line, containing the date and description
+of the journal entry in the format <em/YYYYMMDD "text"/ (the quotes are
+necessary if the description is to consist of more than one word), and at
+least two lines describing movements on various accounts.  For example, if
+your company issues an invoice for services rendered, you might make a journal
+entry called "Invoice for services rendered" with a debit entry to Accounts
+Receivable and a credit entry to Revenues.  Assuming that ``311 - 00'' is your
+Accounts Receivable account and ``518 - 00'' is your Revenues account, your
+journal entry might look something like this:
+
+<tscreen><verb>
+mdebs-> 19980101 "Invoice for services rendered"
+mdebs-> 311-00 12100 0
+mdebs-> 518-00 0 12100
+mdebs-> 
+</verb></tscreen>
+
+<p>
+The ending newline signals <em/mdebs/ the end of the journal entry.  If the
+journal entry passes the various checks (valid date, existing accounts, and
+balanced debit/credit sides), <em/mdebs/ will insert the entry into the
+database.
+
+<p>
+Journal entries can be more complicated.  For example, in some parts of the
+world, companies have to charge VAT on their invoices.  Assuming a VAT rate of
+5% and assuming the appropriate VAT account is ``343 - 01'', the above journal
+entry might look like this:
+
+<tscreen><verb>
+mdebs-> 19980101 "Invoice for services rendered"
+mdebs-> 311 - 00 12100 0
+mdebs-> 343 - 01 0 576
+mdebs-> 518 - 00 0 11524
+mdebs-> 
+</verb></tscreen>
+
+<p>
+Take extra special care to avoid making duplicate journal entries.  My method
+for avoiding this is to keep accounting documents (invoices,
+receipts, etc.) in a pile until I sit down to do bookkeeping.  As I make
+journal entries for each accounting document, I put them in a binder.  This
+helps keep the paper documentation in line with the books in the computer.
+
+<sect1>FAQ
+<p>
+Actually, these questions are not asked ``frequently'', but calling this
+section ``SAQ'' (Seldomly Asked Questions) seemed misleading.
+
+<descrip>
+
+<tag/Where can I get the newest version?/ The newest release of <em/mdebs/
+is available on http://web.iol.cz/livingston/mdebs/;
+
+<tag/Where's the documentation?/ All the documentation is lumped together in a
+single file, mdebs.sgml.  HTML and text versions of this file are included in
+the distribution for convenience.  [Need to figure out how to generate a man
+page from the SGML file.]
+
+<tag/I downloaded Postgres, but <em/mdebs/ still won't compile!/ You may
+have downloaded <em/Postgres 4.0 (4.2)/, otherwise known as ``University
+Postgres''. This is not what you want. University Postgres uses a query
+language called <em/POSTQUEL/ and is no longer under active development.
+
+<p>
+<em/mdebs/ was written using <em/PostgreSQL/.  For more information on
+<em/PostgreSQL/, see http://www.postgresql.org/
+
+<p>
+I recommend using a pre-packaged binary version of PostgreSQL instead of
+building it from source, unless you are a masochist or are trying to prove
+something.  As of the time of this writing, the Author was using PostgreSQL
+6.5.3.
+
+</descrip>
+
+<sect1><em/mdebs/ command Syntax
+
+<p>
+<em/mdebs/ commands consist of three components: "verb" (e.g., DUMP, QUERY,
+INSERT) indicating what type of operation to perform, an "object" (e.g.,
+JOURNAL, CHART, ACCOUNT) indicating the type of data to be used in the
+operation, and "the rest", which varies from case to case (could be a range of
+dates for a DUMP command, or data to be inserted in the case of an INSERT).
+
+<p>
+Commands are to be distinguished from journal entries, which are complex and
+use a completely different syntax.  Commands are always entered on a single
+line, whereas journal entries take up several lines.  Journal entries are
+discussed in the Fundamental Principles section, above.
+
+<p> <em/DUMP/
+
+<p>
+These commands generate ("dump") reports, or lists, of accounting data.
+
+<p> <em/DUMP CHART/
+
+<p>
+Lists the Chart of Accounts.
+
+<p>
+The command takes no arguments.  Its output is a table describing the Chart of
+Accounts for the current database.
+
+<p> <em/DUMP ACCOUNT/
+
+<p>
+Generates a report giving movements on an account over a specified time
+period.
+
+<p>
+The command takes an account number (or shortcut) argument and an optional
+date range.  If no date range is specified, the entire fiscal year is assumed.
+The command's output is a table containing all movements on the given account
+during the period specified.  At the end, debit and credit totals are written.
+This program can be useful in monthly, quarterly, and annual closings, VAT
+closings, etc.  If the beginning and ending dates are the same, it prints out
+all movements for a particular day.
+
+<p>
+A series of <em/DUMP ACCOUNT/ commands could be used to print out a General
+Ledger for any given period.
+
+<p> <em/DUMP JOURNAL/ (see <em/QUERY JOURNAL)/
+
+<p>
+Dumps the journal (book of original entry) for specified date range.
+
+<p> <em/QUERY/
+
+<p>
+These commands generally output a single item, or are used to determine
+whether something exists or not.
+
+<p> <em/QUERY JOURNAL [date] [ser_num]/
+
+<p>
+Given a date and serial number of a particular journal entry, this command
+outputs the journal entry as it might look in an actual journal.  This command
+can be used in conjunction with <em/DUMP ACCOUNT/ to analyze account
+movements.
+
+<p> <em/[Various shell scripts for making journal entries]/
+<p>
+These shell scripts use the <em/dialog/ program in an attempt to provide a
+user-friendly way to enter journal entries into datafiles.  Just choose the
+type of journal entry you want to make, provide the correct information, and
+the script runs <em/mdebs/ for you.
+
+<sect1>Bash scripts for mdebs administration
+
+<p> <em/dbinit/ - Database (re)initialization script
+
+<p>
+Like <em/mdebs/ itself, <em/dbinit/ gets the name of the database to be
+initialized from the <em/MDEBSDB/ environment variable.
+The algorithm that <em/dbinit/ uses can be summarized as follows:
+
+<p>
+1. If MDEBSDB enviro-variable is defined, ask user if s/he wants to
+  use this as the database to be (re)initialized; if not, ask user for
+  different database name
+
+2. Get fiscal year starting and ending dates from user
+
+3. Get path and filename of file containing commands for
+  initializing the Chart of Accounts
+
+4. If database already exists, ask for user confirmation before
+  destroying it
+
+5.(Re)create the database
+
+6. Set up the fiscal year of the database
+
+7. Set up the initial Chart of Accounts (both the fiscal year and
+  the Chart of Accounts can be changed at will later)
+
+<p>
+Using <em/dbinit/, you can set up as many mdebs databases as you like.  Each
+database covers one fiscal year, or, more precisely, the time between the
+beginning and ending dates specified as arguments to the <em/dbinit/ script
+when the database was initialized.
+
+<p>
+Be careful with <em/dbinit/.  I've made an effort to make the script be
+careful and warn the user if an existing database is specified, but it only
+asks once... So keep in mind that you could reinitialize (read lose) a
+database with real data if you're not careful.
+
+<p>
+[This would be a good place for a pointer to a section describing how to back
+up mdebs databases, including instructions on how to restore them from
+backups.]
+
+<p>
+Before you first run <em/dbinit/, you'll have to edit the script to make sure
+the <em/MDEBSDIR/ variable points to the directory containing the <em/mdebs/
+binary.  Read the comments at the beginning of the file; it should be fairly
+self-explanatory.
+
+<sect1>Making Backups
+
+<p>
+After you have used <em/mdebs/ for some time (say, a month or two), you'll
+probably want to start making backups of your data.
+
+<p> <em/pgcopy-backup/
+
+<p>
+Description of the pgcopy-backup script.
+
+<p> <em/postgres-backup/
+
+<p>
+Description of teh postgres-backup script.
+
+<sect1>Data Structures
+
+<p><em/fiscyear/ - Fiscal Year Table
+<p>
+The table <em/fiscyear/ defines the fiscal year.
+The field <em/startd/ is the starting date, and <em/endd/ is the ending
+date.
+
+<itemize>
+<item>startd (DATE)
+<item>endd (DATE)
+</itemize>
+
+<p><em/osnova/ - Chart of Accounts Table
+<p>
+The table <em/osnova/ defines the Chart of Accounts.  <em/acct/ is the
+account's code (up to three characters), <em/anal/ is a two-character
+sub-account (``analytical'') code, and <em/desig/ is a description of the
+account.
+
+<itemize>
+<item>acct (CHAR(3))
+<item>anal (CHAR(2))
+<item>desig (VARCHAR(60))
+</itemize>
+
+<p><em/descs/ - Journal Entry Descriptions Table
+<p>
+The table <em/descs/ holds the journal entries, and contains the fields
+<em/ent_date/ (Entry Date) and <em/por_cislo/ (Serial Number), which
+together constitute a link to the <em/denik/ (Journal) table.  In addition,
+<em/descs/ contains a field <em/desig/, which describes the journal entry.
+
+<itemize>
+<item>ent_date (DATE)
+<item>por_cislo (INT)
+<item>desig (VARCHAR(80))
+</itemize>
+
+<p><em/porad/ - Journal Entry Serial Number Table
+<p>
+The table <em/porad/ (Serial) is a funny little table made necessary by the
+relationship between the tables <em/descs/ and <em/denik/ (Journal).  When
+journal entries are being added to the database the program has to be able to
+determine the last serial number used for a particular day.  It does so by
+looking up the value of <em/max_cislo/ (Maximum Number) for the particular day
+in this table.
+
+<itemize>
+<item>ent_date (DATE)
+<item>max_cislo (INT)
+</itemize>
+
+<p><em/denik/ - Journal Entry Accounts and Amounts Table
+<p>
+Last, but certainly not least, is the table <em/denik/ (Journal), which contains
+fields describing a journal entry.  The <em/ent_date/ and <em/por_cislo/
+(Serial Number) fields point to the <em/descs/ table.  The <em/[m]d_acct/
+(Debit/Credit Major Number) and
+<em/[m]d_anal/ (Debit/Credit Minor Number) fields point to the <em/osnova/ (Chart) table (in other words, the
+latter contain account numbers for debit and credit amounts).  The
+<em/[m]d_amt/ (Debit/Credit Amount) fields contain debit and credit amounts.  Amounts are
+represented as integers in the database.  When asked to display movements on
+accounts, <em/mdebs/ will display the amounts with a decimal point, but this
+is just a cosmetic feature for user comfort.
+Each record is like one line of a journal entry; either the
+debit or the credit side will be zero.  When all entries matching a certain
+date and serial number are added together, the debit and credit sides must
+be equal.
+
+<itemize>
+<item>ent_date (DATE)
+<item>por_cislo (INT)
+<item>md_acct	(CHAR(3))
+<item>md_anal (CHAR(2))
+<item>md_amt (INT)
+<item>d_acct (CHAR(3))
+<item>d_anal (CHAR(2))
+<item>d_amt (INT)
+</itemize>
+
+<sect1>BUGS
+<p>
+Many.  If you find one, please let me know.
+
+<sect1>SEE ALSO
+<p>
+postgres(1), PostgreSQL documentation (http://www.postgresql.org)
+<p>
+Mdebs Home Page: http://web.iol.cz/livingston/mdebs/
+
+<sect1>AUTHOR
+<p>
+Nathan L. Cutler livingston@iol.cz
+
+</manpage>
+

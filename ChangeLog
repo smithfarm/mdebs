@@ -1,0 +1,505 @@
+28 Nov 2008
+        Wide-character hack to get mdebs to work in Ubuntu (Gnome Desktop
+        Environment)
+
+24 Jul 2000
+	Shortcut commands produce weird output when the shortcut table is
+	missing.
+
+	mdebs-> dump shortcut
+	Short cut table is empty
+	mdebs-> dump journal sho=PRE
+	Shortcut ->?@?@<- not found
+	mdebs-> dump journal sho=1
+	Shortcut ->1075125488<- not found
+
+20 Apr 2000
+	It would seem the SELECT count(*) I put in on 27 Jan is causing
+	some problems.  Now when I run a plain "dump journal" command it
+	fails as follows:
+
+	runQuery(): Preparing to run SQL query:
+	SELECT count(*) FROM jou_lines W1, jou_head W2 WHERE W1.id=W2.id AND;
+	runQuery(): Backend appears to have handled query
+	ERROR:  parser: parse error at or near ""
+	processResult(): Query status PGRES_FATAL_ERROR
+
+	Fixed.  Embarassing bug, that.
+
+12 Apr 2000
+	Fixed missing data type "int" in dbinit.c
+
+27 Jan 2000
+	Found a problem with handling bad regular expressions - it crashes!
+	Fixed it (I think).  Had to add code to make it always run a 
+	"SELECT count(*) ..." on all queries before declaring a cursor,
+	because if user puts in an illegal regex, I can recover from the
+	resulting backend error with a "SELECT count(*)".  It's more ugly
+	when doing a DECLARE CURSOR and then having the backend choke on
+	the first FETCH (with an ugly, nonsensical NOTICE:) and then having
+	to recover from within a transaction.  The joys of libpq
+	programming.
+
+22 Jan 2000
+	Found a segfault when running mdebs --initialize without the
+	MDEBSDB environment variable set.  Fixed (added error exit).
+
+18 Jan 2000
+	Decided it was time to get the PRINT ... commands working.
+
+17 Jan 2000
+	A light bulb went off in my head concerning getting the account
+	number qualification to work with DUMP JOURNAL.  It came to me
+	after reading through the beginning (basic SQL) chapters of Bruce
+	Momjian's book on PostgreSQL (downloaded from
+	ftp://postgresql.org/pub/doc/aw_pgsql_book.pdf).  The key lies in
+	the use of a subquery in the WHERE clause:  AND id IN (SELECT
+	DISTINCT id FROM jou_lines WHERE acct='...' AND anal='...')  That
+	definitely does the trick.  Now to implement it.  Done (Wow that
+	was fast).  Tested with a query that returns five or six journal
+	entries.  Now to test with a larger result set (100-200 journal
+	entries, <500 total lines).  It takes a few seconds to process, but
+	it's not an unbearable wait.  Hurrah!  But wait -- I can't use the
+	same WHERE clause qualification for both DUMP JOURNAL and DUMP
+	ACCOUNT -- I have to test cmdspec as before.  OK; now both commands
+	(seem to) work as they should.
+
+12 Jan 2000
+	Incremented version number to 0.07.  Decided to change structure of
+	jou_lines table to:
+		CREATE TABLE jou_lines (
+			ent_date 	date, 
+			ser_num 	int,
+			debit 		bool, 
+			acct 		char(3),
+			anal		char(3),
+			amount		int
+		)
+	instead of the previous structure, which was defective.  It was
+	defective because it used four fields (deb_acct, deb_anal,
+	cre_acct, cre_anal) with the unused side being indicated by the
+	values '000' '000' and 0 for ..._acct ..._anal and ..._amt,
+	respectively.  The new structure reaches the same end using the
+	boolean field "debit" (true when acct/anal/amount is debit, false
+	when credit).  In addition to saving disk space and making it
+	easier to test and enforce data integrity, this will allow DUMP
+	JOURNAL to search via acct/anal which had not been possible under
+	the previous scheme.  The only advantage the previous structure had
+	over the new one was dubious:  it allowed a journal entry line to
+	contain non-zero values on both sides (debit and credit)
+	simultaneously.  Converted data in liv1999 database by creating the
+	new table under the name 'foo', doing a couple insert into foo
+	select ... statements, dropping 'jou_lines' and then selecting foo
+	into jou_lines.  Started work converting all functions that work
+	with jou_lines to use the new table structure.  dbinit.c, mdebs.h,
+	delete.c (no changes needed), dump.c, journal.c, mdebs.y.  Got DUMP
+	ACCOUNT working.  DUMP JOURNAL refuses to fetch first row from
+	cursor.  Changed the way fetchNextJournalEntry() determines the end
+	of a journal entry.  Found the fetch problem - I don't understand
+	how mdebs was working before, because startTransaction() and
+	endTransaction() were defined as "BEGIN" and "END" rather than
+	"BEGIN WORK;" and "END WORK;".  Got QUERY/DUMP JOURNAL working, but
+	debit and credit are reversed!  Checked database - it is correct.
+	Found problem (strcmp() returns 0 when strings are equal, not 1).
+	Still can't do a DUMP JOURNAL <maj-min> because the query returns
+	only those lines that correspond to the given account number.  I
+	can't figure out a way to return all the lines without using a
+	temporary table or view.  The view would be OK, only it is
+	difficult or impossible to integrate it into the parser the way I
+	have it constructing the queries.  OK, decided to take the plunge
+	and switch from the current ser_num to a ser_num based on SERIAL.
+	But how to convert the data?  Decided to retain current ser_num and
+	add a new field, id, to jou_head and jou_lines.  This id field will
+	be populated using the nextval() and currval() functions together
+	with a PostgreSQL SEQUENCE created in dbinit.c.  Updated dbinit.c
+	and rest of code to use the new id field (using SEQUENCE
+	jou_head_id_seq) in jou_head and jou_lines.  Rudimentary testing.
+	See major performance boost.
+
+11 Jan 2000
+	Uncovered bug:  mdebs has problems with negative numbers.
+	Lexanalyzer seems to send them back, parser sees the the negative
+	number in question, but no records containing negative numbers get
+	written to the database.  Wrong.  Everything gets written to the
+	database correctly!  But my print_journal_entry() function doesn't
+	seem to display anything.  Tracked down the bug:  functions were
+	checking for debit/credit entries by whether the amounts were
+	greater than zero, rather than the correct "not equal" to zero,
+	which allows for negative numbers.  DUMP ACCOUNT/JOURNAL goes to
+	display even when it finds no records.  Fixed.  Found another bug:
+	when the counters in DUMP ACCOUNT go beyond 2,147,483,647
+	(limit for signed int) they appear as negative numbers at the bottom
+	summary.  The balance is correct, however.  Could have worked
+	around problem by changing the counter declarations to unsigned
+	int.  This would have let me go up to double that.  However
+	eventually this limit would be passed too and then the balance
+	would not be correct.  On a 64-bit machine like the Alpha, long int
+	goes up to a 19 digit figure - however we still live in a world of
+	32-bit processors.  Attempted to fix by changing deb_counter and
+	cre_counter to type double.  This appears to work OK, but I'm not
+	sure up to what value.
+
+7 Jan 2000
+	Changed parsing of debug option in optproc.c to use the bitwise &
+	operator, after writing dec2bin.c to figure out how bitwise
+	operations work.  Put in a flags parameter to dump_account,
+	which will be parsed bitwise.  The lowest-order bit signifies
+	whether or not to display the Maj-Min field in the printout.  The
+	second bit could conceivably determine whether to display the
+	shortcut field.  Eliminated the dump_account_wrapper() function.
+	Now I need to eliminate all the dump_journal_...() funtions,
+	replacing them with a single dump_journal() with the SELECT query
+	being constructed in mdebs.y (the parser).  Done.  What a relief!
+	Oops, can't specify accounts with DUMP JOURNAL, because the query
+	selects only individual lines from the journal entries.  Found
+	another bug:  dump account/journal sho=<number> segfaults.  Traced
+	down the segfault - it is caused by passing a NULL string to
+	strlen().  Weird that strlen() should segfault under those
+	conditions.  Fixed by controlling for NULL string.  The changes to
+	DUMP ACCOUNT and DUMP JOURNAL are such that they warrant a version
+	number increment.  Done.  Added a QUERY BINARY <number> command
+	that prints out the binary equivalent of a decimal number.  Need to
+	make a command that goes the other way too, or at least it would be
+	neat if I did.
+
+6 Jan 2000
+	Back to the grinder.  DUMP ACCOUNT xxx-yyy <date_range> gives a
+	segfault.  Turn on debugging (-d 5).  It chokes when it returns
+	from lexanalyzer.  Add debugging messages.  Problem was I was
+	treating TOK_NUMBER semantic value as a string, except in mdebs.yy
+	(the lexanalyzer) I convert it to int before it goes to parser.
+	Added debugging messages and commentary.  It now seems to work
+	well, for what it's worth, but I've lost the functionality I had
+	before where it wouldn't display the account number ("Maj-Min")
+	column when only one account was displayed.  I'm not sure how I
+	will work around this problem.  Ran into weird bug.  It appears
+	that when I don't include a closing quote on a string, the buffer
+	isn't flushed and the next string entered is added on to the
+	previous one.  Fixed it.  Now I badly need OR functionality though.
+	Wow; implemented OR, AND, and parentheses and it seems to work!
+	Amazing!  However, this has opened a big can of worms in terms of
+	run-time errors.  Spent late evening writing a function to convert
+	int values to a string of 1s and 0s representing its binary value.
+	Did this to figure out the & and | bitwise operators.  Managed to
+	figure it out, but it took longer than planned and the result was
+	just a confirmation of what I should have known without going
+	through this exercise.  I'm thinking there must be a better
+	conversion algorithm than the one I came up with, too.  I have to
+	get up early tomorrow morning so I'm going to stop.
+
+5 Jan 2000
+	Have some ideas about how to improve the parsing, especially in
+	cases like DOC= which should return a semantic value - the string
+	to search by.  As things stand now, the DOC= token is void of
+	semantic value and the parser looks for the string to search by in
+	the next token.  I'm thinking more along the lines of a DOC="..."
+	token, with required quotes.  To do this elegantly, though, I have
+	to change the way the parser works because currently white space
+	triggers the next token.  White space outside of double quotes
+	should just be ignored in the lexanalyzer.  OK this works.
+	However, I realized that my handling of DUMP ACCOUNT and DUMP
+	JOURNAL is a complete mess.  Decided to move assemblage of SELECT
+	query into mdebs.y for both.  This will eliminate a lot of
+	spaghetti code (better modularization, less duplication).  Managed
+	to get DUMP ACCOUNT to handle a couple simple queries this way.
+
+4 Jan 2000
+	Y2K Scare!  For a few minutes I thought I had a Y2K bug in
+	valiDate() but it turned out I was just confused.  Added some
+	debugging messages anyway.
+
+26 Dec 1999
+	Went through all source code files and standardized calls to
+	runQuery().  Now when a query fails, mdebs should print an error
+	message including the query text and the name of the function from
+	which runQuery() was called.  It should also properly free the
+	query buffer.  It does all this while maintaining the abstraction
+	of pgresfunc.c from the rest of mdebs (which makes each function
+	call a bit cumbersome, but I think it's worth it).  Introduced new
+	specification "RGX=" (or, alternatively, "REG=") to indicate a
+	query/dump by regular expression.  Introduced another
+	specification, "DOC=" for searching journal entries by accounting
+	document.  Implemented a DUMP JOURNAL DOC= <string> command.
+	Implementing new DUMP JOURNAL commands is now just a matter of
+	setting up two query strings and a header string and sending them
+	to dump_journal().  This avoids code duplication.  Now I need to
+	make sure no non-backslashed single-quotes get through to the
+	backend in any query.  Lots of debugging.  DUMP ACCOUNT now
+	displays Minor Number column only when minor number is not given in
+	query (DUMP ACCOUNT XXX-*).  Made a snapshot.  Redid
+	dump_accounts_by_number() (formerly dump_chart()) to display the
+	account numbers as XXX-YYY instead of using fetchAndDisplay().
+	print_journal_entry() now prints account names as well as numbers
+	(performance hit is tolerable; I thought about ways to cache the
+	names but concluded that it's more trouble than it's worth --
+	mainly because the cache would not reflect any changes made by
+	other mdebs processes running concurrently, either by the same user
+	or a different user to the same database).
+
+25 Dec 1999
+	Found out from pgsql-general list that backslashed apostrophe
+	characters should work.  The testing query I was using was poorly
+	constructed and the parse error was caused by that and not by quote
+	handling.  Now how to get mdebs to handle single quote characters
+	transparently.  Found error in regular expression handling:
+	verify_regexp() fails to detect a badly formed regexp and sends it
+	on to the backend.  Couldn't figure out how to get mdebs to detect
+	bad regexps better, but I did come up with a workaround to make
+	sure mdebs recovers when/if backend chokes on a regexp.  Since the
+	backend reports the error it found, this works fine.  Returning to
+	single-quote handling, though.  I think the best way to do it is to
+	filter strings that will be sent to the backend through a
+	"backslasher" function that will insert backslashes before all
+	single-quote characters that aren't backslashed already.  I will
+	recycle an abondoned function, strip_quotes(), for this purpose.
+	It is no longer used, so I will change it's name to
+	backslash_single_quotes().  OK, implemented.  However, using this
+	function introduces new bugs.  E.g., when I attempt to delete a
+	shortcut that contains single quotes in _desig_, the backend
+	reports a parser error.  I'm going to have to go through all the
+	code to standardize calls to runQuery() to check for return value
+	of -1 and to make sure all strings passed to backend in queries
+	have been processed with backslash_single_quotes().
+
+23 Dec 1999
+	Incremented version number (to 0.04).  Banged head against wall
+	trying to introduce support for "configure" (autoconf).  Failed
+	miserably.  My goal is to (eventually) debianize mdebs.  I looked
+	at the "hello" example Debian package and saw that it used
+	configure/autoconf - that's why I tried to get it to work with
+	mdebs.  Oh well.  Took an axe to mdebs.y - broke it up so that
+	mdebs.y no longer contains main().  Created files main.[ch] and
+	optproc.[ch] in the process.  Revised Makefile.  bison is now
+	called using "-y" option so it behaves like "yacc".  I want to
+	change the --debug option to allow selection of pgresfunc.c and
+	lexanalyzer debugging at runtime.  I propose to do this by allowing
+	an option to debug that takes an optional argument.  OK - seems to
+	work.  However, during testing I ran "mdebs -D 1" and it
+	segfaulted.  Oops - that's because it calls exit_nicely() (which
+	does a PQfinish()) when there's no database connection open.
+	Fixed.  Worked on documentation.  Made the INSTALL file in the
+	top-level directory.  Deleted stuff now covered in the INSTALL file
+	from the documentation proper (manpage and info file now assume
+	mdebs has been built and properly installed).  Decided I needed to
+	implement DUMP JOURNAL <shortcut> and a DUMP ACCOUNT <shortcut>
+	commands to make shortcut functionality make more sense.  Got
+	sidetracked by segfault in QUERY SHORTCUT.  Fixed.  Got bogged down
+	rewriting fetchAndDisplay() to use PQprint().  Need source code to
+	psql to figure out how to call it (I can't figure out a reasonable
+	way to initialize the option structure, which has type PQprintOpt).
+	Returned to PQdisplayTuples().  Started to implement dump journal
+	by shortcut.  Introduced new concept in mdebs.y:  a
+	"specification", i.e. a fixed string that signals what the next
+	token is supposed to be.  In this particular case, the
+	specification is `SHO=' (can be lower case) and it signifies that
+	the token that follows is either a shortcut code or a shortcut
+	designation.  Unfortunately, the way my parser is set up there has
+	to be white space between SHO= and the shortcut code/designation
+	(otherwise it wouldn't be able to handle double-quoted shortcut
+	designations).  Started to implement dump_journal_by_shortcut().
+	Finished in incredibly short time.  Asked questions about
+	single-quotes and renaming databases on pgsql-general list.
+
+22 Dec 1999
+	Did some work on the documentation.  I like the idea of having a
+	simple-ish, not-too-long manpage and a separate info file
+	containing full-blown verbose documentation.  Discovered that the
+	current version of sgml-tools I have installed is able to generate
+	man-pages and info-files.  This is a pleasant surprise.  Need to
+	edit the Makefile to install the man-page and info-file in the
+	right places for the `man' and `info' commands to find them.
+
+21 Dec 1999
+	I think I will make the lexical analyzer recognize YYYYMMDD:X as a
+	journal entry instead of dealing with it in the parser.  Done!
+	mdebs.yy now correctly interprets YYYYMMDD:X and mdebs.y (the
+	parser) takes this as valid argument for QUERY JOURNAL and DELETE
+	JOURNAL commands.  However, when I query a journal entry I just
+	deleted using the new syntax I get a weirdo error: "PQgetvalue:
+	ERROR! tuple number 0 is out of range 0..-1" followed by a
+	segfault.  Put on your debugging cap, Nathan!  Geez -
+	query_journal_entry() wasn't checking at all how many instances the
+	DECLARE CURSOR query was returning.  Fixed.  Eliminated some
+	embarrassingly redundant code in dump_journal().  Implemented a
+	"mode" argument to dump_journal() to allow dumping the journal to
+	screen, printer, or file (printer and file dumping not yet
+	implemented).  Changed print_journal_entry() to omit the
+	designation line if the designation is empty.  Next problem: I've
+	got the lexanalyzer ignoring ' characters within quoted strings,
+	but when it encounters one in a non-quoted string it doesn't handle
+	correctly.  Apostrophes.  The best way to handle them would be to
+	automatically backslash them when they appear in strings.  The only
+	problem with this is that the postgresql parser can't seem to
+	handle strings containing the ' character.  To wit:
+	  $ psql testing
+	  testing=> INSERT INTO bubba 'Bubba\'s girl';
+	  ERROR:  parser: parse error at or near "'"
+	  testing=>
+	Until this problem is fixed in PostgreSQL, I have to either ignore
+	apostrophes or have them trigger a parser error.  I found I was
+	able to ignore them within quoted strings, but not in non-quoted
+	strings, so I decided to have any apostrophe trigger a parser
+	error.  I suppose if I really tried hard I could force readline to
+	ignore apostrophes or not accept them as input, but that seems like
+	beating a dead horse to me.  Geez, what next?  Make a snapshot, I
+	think. Still at it, though.  Fixing up the scripts in Mirka's
+	directory (./menu/*) to run with mdebs-0.03.  Uncovering and fixing
+	various buglets.  Discovered that dump_account() has not yet been
+	adapted to use a temporary file and the DUMP_TO_SCREEN,
+	DUMP_TO_PRINTER etc. functionality.  Probably need a way to share
+	this functionality among dump_journal() and dump_account().  Do
+	this by writing new functions:  open_tmp() to open a temporary
+	file, close_tmp() to close it, browse_tmp() to browse it, and
+	remove_tmp() to remove it.  Cool.  Implemented DELETE SHORTCUT
+	command and ended up reworking QUERY SHORTCUT as well.  Next bug
+	found:  DELETE SHORTCUT allows me to delete shortcuts even when
+	instances of that shortcut remain in table jou_head.  Fixing that
+	leads me to the question of whether I can do a DUMP JOURNAL by
+	shortcut.  If not, then I have no way to find out what instances of
+	a particular shortcut remain!
+
+20 Dec 1999
+	Fixed some kind of segfault in the delete journal routine that was
+        preventing me from deleting a bogus journal entry I had created. 
+        Pondered some over Kernighan & Ritchie.  Entering journal
+        transactions now works with the required document and description
+        fields and an optional shortcut field which is either the shortcut
+        number or the shortcut text. Thought about how journal entries are
+        specified.
+
+17 Dec 1999
+	Did away with the jou_max table in dbinit.c because it is no
+        longer used anywhere in the code.  The previous jou_max
+        functionality (the table was formerly known as porad) can be
+        accomplished just as well using the SQL function MAX(). Converted
+        the liv1999 database to the new table structure; liv2000 is now
+        an mdebs-0.03 version of liv1999.  Using 'psql', moved accounting
+        document entries from 'desig' to 'document' field in jou_head in
+        liv2000 testing database.  Fixed segfault in dump_account() when
+        user asks for range of accounts (e.g., 'dump account 343-*'). 
+        Reformatted dump_account to display both accounting document
+        ('document') and description text ('desig'). Revisedx
+        dump_journal() to run verify_journal_entry on each journal entry
+        only when --debug is specified.
+
+13 Dec 1999
+	Added sanity checks to dbinit_create() (dbinit.c), which is called
+	using --initialize command line argument.  It won't attempt to
+	create tables in a non-existent database or one that already has
+	non-system tables in it.  Spent way too much time trying to figure
+	out how to insert a macro into another macro which is defined as a
+	string constant (to insert length values for varchars into CREATE
+	TABLE queries that were set up using #define).  I tried
+	stringification, concatenation, stringification by macro function -
+	nothing worked.  In the end I rewrote dbinit_create() to load the
+	statements into dynamically allocated buffers using asprintf and
+	put the entire asprintf statements into macros.  Changed how the
+	--db|-D option works to ensure that the --initialize code takes the
+	database name from the command line when this option is given.
+	Also, if the --debug|-d option is given _before_ the --initialize
+	option on the command line, dbinit_create() just prints out the
+	CREATE TABLE queries instead of sending them to the backend.
+	Ran into a nasty bug:  When I enter a journal entry with a
+	shortcut, it correctly inserts the journal entry but when I do a
+	dump account on one of the accounts right after, it segfaults and
+	enters some kind of limbo state.  When I run mdebs again I can do
+	a dump account or a dump journal and the entry shows up just fine.
+	This prompted me to figure out a way to turn on PGRESFUNC_DEBUG in
+	the Makefile based on whether I do a "make debug" or just a plain
+	"make".  Added this functionality to Makefile.  Hunted down
+	segfaults.  One was occurring because I was referencing an element
+	in the short_cut structure "pointed to" by a NULL pointer.  I
+	managed to get a fatal error out of the backend but couldn't
+	reproduce it.  Added a bunch more debugging messages.  Need to redo
+	the print_journal_entry() function to display the shortcut itself
+	rather than the shortcut code.  Will do this by putting the journal
+	entry's "desig" field on a line by itself.  Done.  More work on
+	shortcut handling.  Shortcut code 0 is reserved for cases when no
+	shortcut is given.  When shortcut code 0 is encountered, the string
+	MDEBS_NOSCSTRING is printed.  Zero (0) is accepted as a valid
+	shortcut but insert_shortcut() refuses to accept it (i.e., the user
+	cannot do an INSERT SHORTCUT 0 "Some text" command).  When no
+	shortcut is given in a journal entry, 0 is the default shortcut
+	written to the database.  I've had enough for today.  Time to wind
+	down. But no, "query shortcut <existing_scstring>" gives me a
+	segfault.  Same thing for nonexistent scstring.  Fixed.
+	--prompt|-p option was not working correctly.  Fixed.
+
+12 Dec 1999
+	Revised dump_journal() (dump.c) to dump the journal entries to a
+	temporary file and then run MDEBS_PAGER_COMMAND (mdebs.h) on that
+	file, as opposed to the previous practice of piping the output to
+	MDEBS_PAGER_COMMAND, which caused undesirable behavior with large
+	datasets.  Added code (setDateStyle() and showDateStyle()) to
+	ensure that DateStyle is set to 'NonEuropean' whenever mdebs opens
+	a database connection.  This is necessary to ensure that mdebs
+	processes dates correctly and has no effect on the mdebs user, who
+	is forced to use the YYYYDDMM format.  Added "QUERY DATESTYLE"
+	command to allow user to query the backend's DateStyle setting.  In
+	the PostgreSQL 6.5.3 documentation I notice that there is now
+	support in the backend for ISO 8601 Concatenated Date format, which
+	means that theoretically I could do a SET DateStyle TO 'ISO'; and
+	then dispense with the conversions to and from MM-DD-YYYY and
+	YYYYMMDD.  But: if it ain't broken, don't fit it, right?  Worked on
+	shortcut processing code (queries, inserts, dumps).
+
+11 Dec 1999 
+	Abandoned mdebs version 0.2.  Migrated 0.2 changes to 0.3.  Rewrote
+	code for validating and changing database name.  Rewrote options
+	processing code in mdebs.y.  Eliminated enviro.[ch].  Current
+	database name is no longer stored in environment variable, but in
+	global variable instead.  Implement flags as global variables as
+	well.  Introduced --debug option and implemented a slew of
+	debugging messages to work with it.  Got version 0.3 to compile and
+	performed initial tests.  Made commitment to use version 0.3 (with
+	new table structure, including shortcuts and accounting document
+	field) for company bookkeeping starting in fiscal (calendar) year
+        2000.
+
+10 Dec 1999
+	Upgraded server machine to PostgreSQL 6.5.3 and restored liv1996,
+        liv1997, liv1998, and liv1999 databases from pg_dump files.
+
+27 Dec 1998
+	Started work on mdebs-0.02.  First, have to modify the table
+	structures:
+
+OLD (0.01)				NEW (0.02)
+================================================================================
+N.B.: Debits are on the left!			       Credits are on the right!
+================================================================================
+
+osnova					chart
+  acct  	char(3)			  acct  	char(3)
+  anal  	char(2)			  anal  	char(3)
+  desig 	varchar(60)		  desig 	varchar(60)
+
+denik					jou_lines
+  ent_date	date			  ent_date	date
+  por_cislo	int			  ser_num	int
+  md_acct	char(3)			  deb_acct	char(3)
+  md_anal	char(2)			  deb_anal	char(3)
+  md_amt	int			  deb_amt	int
+  d_acct	char(3)			  cre_acct	char(3)
+  d_anal	char(2)			  cre_anal	char(3)
+  d_amt		int			  cre_amt	int
+
+descs					jou_head
+  ent_date	date			  ent_date	date
+  por_cislo	int			  ser_num	int
+  desig		varchar(80)		  desig		varchar(80)
+  					  document	varchar(20)
+  					  shortcut	int
+
+porad					
+  ent_date	date			<TABLE ELIMINATED>	
+  max_cislo	int	
+
+fiscyear				fiscyear
+  startd	date			  startd	date
+  endd		date			  endd		date
+
+					shortcut
+					  code		int
+					  desig		varchar(20)
+

@@ -1,0 +1,70 @@
+#!/bin/sh
+# 
+# postgres-backup
+#
+# Script to backup our PostgreSQL databases. 
+#
+# All it does is run pg_dump on the arguments given.  It assumes that the
+# user running the script has access to the databases.  It creates the 
+# .out.gz files in the current directory.
+
+# Further notes and caveats:
+#
+# It's probably best to keep this backup script in PG_HOME_DIR but I suppose
+# it could be run from anywhere on the system.
+#
+# The script uses temporary files, which it places in TMPDIR, if defined, or
+# PG_HOME_DIR, otherwise.
+#
+# The script takes command-line arguments to be the names of databases the
+# user wishes to backup.  It doesn't make any attempt to determine whether
+# the databases exist or not.
+
+#
+# Function definitions
+#
+
+initialize () {
+
+  # Save current date and time in our preferred format
+  dd="`date +%Y%m%d-%H%M`"
+
+  # Save current directory
+  currdir="`pwd`"
+
+}
+
+#
+# MAIN
+#
+
+initialize ;
+
+echo "Number of arguments passed to script: $#"
+noofargs=$#
+
+if [ $noofargs -lt 1 ]
+then
+  echo "No command line arguments given?  Giving up."
+  exit 0
+else
+  echo "Preparing to process $noofargs possible databases... "
+fi
+
+for currdb do {
+  
+  echo "Now processing database $currdb ..."
+
+  # Determine if database exists (not)
+
+  pg_dump -f $currdb-$dd.out $currdb
+
+  gzip $currdb-$dd.out
+
+} ;
+done
+
+echo "Done."
+
+exit 0 
+

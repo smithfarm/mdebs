@@ -1,0 +1,17 @@
+This is mdebs Version 0.09
+
+mdebs = The Minimalistic Double-Entry Bookkeeping System
+
+mdebs is Copyright (C) 1997-2019 by Nathan L. Cutler.  All rights reserved.
+It is distributed to you under the terms of the GPL license, Version 2.
+Among other things, this means that you are free to redistribute it under
+the condition that you include the full source code.  Please see the GPL
+itself for more information.  It is included in the mdebs distribution
+in the file "GPL".
+
+Please send any comments, questions, constructive criticism, etc. to the
+author, Nathan L. Cutler <presnypreklad@gmail.com>
+
+This distribution includes documentation in the ./doc directory.
+
+                            (This README was last revised on 6 Oct 2019)

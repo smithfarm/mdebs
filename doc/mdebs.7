@@ -1,0 +1,667 @@
+.if n .ds Q \&"
+.if t .ds Q ``
+.if n .ds U \&"
+.if t .ds U ''
+.TH "Mdebs" 7 
+.tr \&
+.nr bi 0
+.nr ll 0
+.nr el 0
+.de DS
+..
+.de DE
+..
+.de Pp
+.ie \\n(ll>0 \{\
+.ie \\n(bi=1 \{\
+.nr bi 0
+.if \\n(t\\n(ll=0 \{.IP \\(bu\}
+.if \\n(t\\n(ll=1 \{.IP \\n+(e\\n(el.\}
+.\}
+.el .sp 
+.\}
+.el \{\
+.ie \\nh=1 \{\
+.LP
+.nr h 0
+.\}
+.el .PP 
+.\}
+..
+.SH NAME
+
+.Pp
+mdebs - The Minimalistic Double-Entry Bookkeeping System
+.Pp
+.SH SYNOPSIS
+
+.Pp
+\fImdebs\fP options
+.Pp
+.SH COPYRIGHT
+
+.Pp
+The \fImdebs\fP program and this documentation is Copyright (C) 1997-1999 by
+Nathan L. Cutler (the ``Author'').
+.Pp
+The Author has released \fImdebs\fP under the terms of the GNU General
+Public License (GPL), Version 2.  A copy of the GPL is provided in the
+top-level directory of the source code distribution in the file ``GPL''.
+.Pp
+If you modify \fImdebs\fP (read the Gnu General Public License before doing so),
+please document your modifications in file separate from this documentation.
+.Pp
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+.Pp
+You should have received a copy of the GNU General Public License
+along with this program;  if not, write to the Free Software
+Foundation, Inc., 675 Mass Ave., Cambridge, MA 02139, USA.
+.Pp
+.SH DESCRIPTION
+
+.Pp
+Mdebs is a program whose goal is to provide a solution for those who need to
+do double-entry bookkeeping under Linux.
+.Pp
+.SH OPTIONS
+
+.Pp
+.nr ll +1
+.nr t\n(ll 2
+.if \n(ll>1 .RS
+.IP "--help OR -h "
+.nr bi 1
+.Pp
+Print out a helpful message.
+.IP " --version OR -v "
+.nr bi 1
+.Pp
+Version information.
+.IP "--prompt OR -p (arg)"
+.nr bi 1
+.Pp
+Sets prompt for mdebs to use
+.IP "--verbose OR -V "
+.nr bi 1
+.Pp
+Instructs mdebs to be more verbose.  This has the effect of displaying
+"mdebs[lowbar]msg" priority messages and can generally be considered useful.
+.IP "--db OR -D (arg)"
+.nr bi 1
+.Pp
+Instructs mdebs to use a database different than MDEBSDB
+.IP "--validate (arg)"
+.nr bi 1
+.Pp
+(Intended for use from shell scripts) Instructs mdebs to check a string to see
+whether it constitutes a valid YYYYMMDD format date.
+.IP "--initialize "
+.nr bi 1
+.Pp
+(Intended for use from shell scripts) Instructs mdebs to set up a table
+structure in the database pointed to by MDEBSDB, which is assumed to be empty.
+.IP "--existdb (arg)"
+.nr bi 1
+.Pp
+(Intended for use from shell scripts) Determine if a database exists
+.if \n(ll>1 .RE
+.nr ll -1
+.Pp
+.SH ENVIRONMENT
+
+.Pp
+.nr ll +1
+.nr t\n(ll 2
+.if \n(ll>1 .RS
+.IP "MDEBSDB"
+.nr bi 1
+.Pp
+Database to use when mdebs is invoked.
+.IP "PAGER"
+.nr bi 1
+.Pp
+Pager to invoke when browsing query results.
+.IP "HOME"
+.nr bi 1
+.Pp
+Full path of the user's home directory.
+.IP "MDEBSDIR"
+.nr bi 1
+.Pp
+Full path of the mdebs installation (src) directory.
+.if \n(ll>1 .RE
+.nr ll -1
+.Pp
+.SH FILES
+
+.Pp
+.nr ll +1
+.nr t\n(ll 2
+.if \n(ll>1 .RS
+.IP "$MDEBSDIR/tools/*"
+.nr bi 1
+.Pp
+Shell scripts for use in administering mdebs
+.IP "$MDEBSDIR/mdebs"
+.nr bi 1
+.Pp
+The mdebs binary.
+.IP "$MDEBSDIR/extras/*"
+.nr bi 1
+.Pp
+Various goodies.
+.if \n(ll>1 .RE
+.nr ll -1
+.Pp
+.SH INTRODUCTION
+
+.Pp
+The goal of \fImdebs\fP is to provide a solution for those who need to do
+double-entry bookkeeping under Linux.
+.Pp
+.SH Fundamental Principles
+
+.Pp
+\fIDates\fP
+.Pp
+.Pp
+Dates must always be specified in the format \fIYYYYMMDD\fP.  That means
+19980101 is January 1, 1998 and 19981231 is December 31, 1998.  Don't even
+think of asking me to change this.
+.Pp
+.Pp
+\fIAccounts\fP
+.Pp
+.Pp
+Accounts are referred to as \fI[lsqb  ]major-number]-[lsqb  ]minor-number]\fP.
+The major number is a three-digit numeric string (000-999) and the minor
+number is a two-digit numeric string (00-99).  You can use an asterisk (``*'')
+instead of the minor number in some cases to refer to all accounts with a
+particular major number.  Examples of valid account numbers are 
+.Pp
+.DS
+.sp 
+.ft RR
+.nf
+010-01
+910-00
+222-*
+.DE
+.fi 
+.ec
+.ft P
+.sp
+.Pp
+.Pp
+\fIAccount Shortcuts\fP
+.Pp
+.Pp
+An "Account Shortcut" is a VARCHAR-type account identification field to
+provide: (a) an alternate account naming scheme that's more flexible and
+user-friendly than the major-minor number scheme, which is taken from Czech
+Republic accounting legislation, and (b) a way to allow the user to group
+items together without making exceptions to the major-minor numbers; this
+would be useful, for example, to a manager who wants to monitor the
+costliness of a project.  Just set up an Account Shortcut for the project
+(call it "PROJ1") and include that in all entries related to the project.
+Then run a DUMP JOURNAL SHO= PROJ1 command in \fImdebs\fP to see all the
+journal entries related to that project.
+.Pp
+.Pp
+\fIMonetary Amounts\fP
+.Pp
+.Pp
+\fImdebs\fP assumes that all monetary amounts will be entered in a currency
+that can be broken down into 100 smaller units (i.e. dollars/cents,
+pounds/pence, marks/pfennigs, korunas/hellers, etc.).  It further assumes that
+monetary amounts will be entered as integers in the smaller units.  If you're
+keeping your books in dollars, this means you must enter all amounts in cents.
+Thus, for \fImdebs\fP 100 means one dollar, 101 means $1.01, etc.  When
+\fImdebs\fP prints out information, it puts in the decimal point, but it won't
+accept decimal input.  This can be confusing at first.
+.Pp
+.Pp
+\fIAccount Document Field\fP
+.Pp
+.Pp
+[lsqb  ]Need to implement and document; should be fairly straightforward.]
+.Pp
+.Pp
+\fIThe Chart of Accounts\fP
+.Pp
+.Pp
+If you're interested in using \fImdebs\fP, you either already know all about
+double-entry bookkeeping and already have a Chart of Accounts for your
+company, in which case it's just a matter of converting your account number
+scheme to use the \fImdebs\fP convention (see above), or you figure you're
+going to use \fImdebs\fP to learn about double-entry bookkeeping, in which case
+you can easily use the example Chart of Accounts provided in the
+\fIchart.mdebs\fP batchfile in the \fIexamples\fP directory of the source
+distribution.
+.Pp
+.Pp
+[lsqb  ]Talk about using Account Shortcuts as an alternate or supplemental account
+specification system.]
+.Pp
+.Pp
+\fIMaking Journal Entries\fP
+.Pp
+.Pp
+When you run \fImdebs\fP from the shell prompt with the \fIMDEBSDB\fP environment
+variable pointing to an initialized \fImdebs\fP database, you are presented
+with an \fImdebs\fP prompt.  At this prompt you can either enter an \fImdebs\fP
+command (see section on Command Syntax, below), or begin a journal entry.
+.Pp
+.Pp
+Journal entries consist of a first line, containing the date and description
+of the journal entry in the format \fIYYYYMMDD "text"\fP (the quotes are
+necessary if the description is to consist of more than one word), and at
+least two lines describing movements on various accounts.  For example, if
+your company issues an invoice for services rendered, you might make a journal
+entry called "Invoice for services rendered" with a debit entry to Accounts
+Receivable and a credit entry to Revenues.  Assuming that ``311 - 00'' is your
+Accounts Receivable account and ``518 - 00'' is your Revenues account, your
+journal entry might look something like this:
+.Pp
+.DS
+.sp 
+.ft RR
+.nf
+mdebs-> 19980101 "Invoice for services rendered"
+mdebs-> 311-00 12100 0
+mdebs-> 518-00 0 12100
+mdebs-> 
+.DE
+.fi 
+.ec
+.ft P
+.sp
+.Pp
+.Pp
+The ending newline signals \fImdebs\fP the end of the journal entry.  If the
+journal entry passes the various checks (valid date, existing accounts, and
+balanced debit/credit sides), \fImdebs\fP will insert the entry into the
+database.
+.Pp
+.Pp
+Journal entries can be more complicated.  For example, in some parts of the
+world, companies have to charge VAT on their invoices.  Assuming a VAT rate of
+5[percnt] and assuming the appropriate VAT account is ``343 - 01'', the above journal
+entry might look like this:
+.Pp
+.DS
+.sp 
+.ft RR
+.nf
+mdebs-> 19980101 "Invoice for services rendered"
+mdebs-> 311 - 00 12100 0
+mdebs-> 343 - 01 0 576
+mdebs-> 518 - 00 0 11524
+mdebs-> 
+.DE
+.fi 
+.ec
+.ft P
+.sp
+.Pp
+.Pp
+Take extra special care to avoid making duplicate journal entries.  My method
+for avoiding this is to keep accounting documents (invoices,
+receipts, etc.) in a pile until I sit down to do bookkeeping.  As I make
+journal entries for each accounting document, I put them in a binder.  This
+helps keep the paper documentation in line with the books in the computer.
+.Pp
+.SH FAQ
+
+.Pp
+Actually, these questions are not asked ``frequently'', but calling this
+section ``SAQ'' (Seldomly Asked Questions) seemed misleading.
+.Pp
+.nr ll +1
+.nr t\n(ll 2
+.if \n(ll>1 .RS
+.Pp
+.IP "Where can I get the newest version?"
+.nr bi 1
+.Pp
+The newest release of \fImdebs\fP
+is available on http://web.iol.cz/livingston/mdebs/;
+.Pp
+.IP "Where's the documentation?"
+.nr bi 1
+.Pp
+All the documentation is lumped together in a
+single file, mdebs.sgml.  HTML and text versions of this file are included in
+the distribution for convenience.  [lsqb  ]Need to figure out how to generate a man
+page from the SGML file.]
+.Pp
+.IP "I downloaded Postgres, but \fImdebs\fP still won't compile!"
+.nr bi 1
+.Pp
+You may
+have downloaded \fIPostgres 4.0 (4.2)\fP, otherwise known as ``University
+Postgres''. This is not what you want. University Postgres uses a query
+language called \fIPOSTQUEL\fP and is no longer under active development.
+.Pp
+.Pp
+\fImdebs\fP was written using \fIPostgreSQL\fP.  For more information on
+\fIPostgreSQL\fP, see http://www.postgresql.org/
+.Pp
+.Pp
+I recommend using a pre-packaged binary version of PostgreSQL instead of
+building it from source, unless you are a masochist or are trying to prove
+something.  As of the time of this writing, the Author was using PostgreSQL
+6.5.3.
+.Pp
+.if \n(ll>1 .RE
+.nr ll -1
+.Pp
+.SH \fImdebs\fP command Syntax
+
+.Pp
+\fImdebs\fP commands consist of three components: "verb" (e.g., DUMP, QUERY,
+INSERT) indicating what type of operation to perform, an "object" (e.g.,
+JOURNAL, CHART, ACCOUNT) indicating the type of data to be used in the
+operation, and "the rest", which varies from case to case (could be a range of
+dates for a DUMP command, or data to be inserted in the case of an INSERT).
+.Pp
+.Pp
+Commands are to be distinguished from journal entries, which are complex and
+use a completely different syntax.  Commands are always entered on a single
+line, whereas journal entries take up several lines.  Journal entries are
+discussed in the Fundamental Principles section, above.
+.Pp
+.Pp
+\fIDUMP\fP
+.Pp
+.Pp
+These commands generate ("dump") reports, or lists, of accounting data.
+.Pp
+.Pp
+\fIDUMP CHART\fP
+.Pp
+.Pp
+Lists the Chart of Accounts.
+.Pp
+.Pp
+The command takes no arguments.  Its output is a table describing the Chart of
+Accounts for the current database.
+.Pp
+.Pp
+\fIDUMP ACCOUNT\fP
+.Pp
+.Pp
+Generates a report giving movements on an account over a specified time
+period.
+.Pp
+.Pp
+The command takes an account number (or shortcut) argument and an optional
+date range.  If no date range is specified, the entire fiscal year is assumed.
+The command's output is a table containing all movements on the given account
+during the period specified.  At the end, debit and credit totals are written.
+This program can be useful in monthly, quarterly, and annual closings, VAT
+closings, etc.  If the beginning and ending dates are the same, it prints out
+all movements for a particular day.
+.Pp
+.Pp
+A series of \fIDUMP ACCOUNT\fP commands could be used to print out a General
+Ledger for any given period.
+.Pp
+.Pp
+\fIDUMP JOURNAL\fP (see \fIQUERY JOURNAL)\fP
+.Pp
+.Pp
+Dumps the journal (book of original entry) for specified date range.
+.Pp
+.Pp
+\fIQUERY\fP
+.Pp
+.Pp
+These commands generally output a single item, or are used to determine
+whether something exists or not.
+.Pp
+.Pp
+\fIQUERY JOURNAL [lsqb  ]date] [lsqb  ]ser[lowbar]num]\fP
+.Pp
+.Pp
+Given a date and serial number of a particular journal entry, this command
+outputs the journal entry as it might look in an actual journal.  This command
+can be used in conjunction with \fIDUMP ACCOUNT\fP to analyze account
+movements.
+.Pp
+.Pp
+\fI[lsqb  ]Various shell scripts for making journal entries]\fP
+.Pp
+These shell scripts use the \fIdialog\fP program in an attempt to provide a
+user-friendly way to enter journal entries into datafiles.  Just choose the
+type of journal entry you want to make, provide the correct information, and
+the script runs \fImdebs\fP for you.
+.Pp
+.SH Bash scripts for mdebs administration
+
+.Pp
+\fIdbinit\fP - Database (re)initialization script
+.Pp
+.Pp
+Like \fImdebs\fP itself, \fIdbinit\fP gets the name of the database to be
+initialized from the \fIMDEBSDB\fP environment variable.
+The algorithm that \fIdbinit\fP uses can be summarized as follows:
+.Pp
+.Pp
+1. If MDEBSDB enviro-variable is defined, ask user if s/he wants to
+use this as the database to be (re)initialized; if not, ask user for
+different database name
+.Pp
+2. Get fiscal year starting and ending dates from user
+.Pp
+3. Get path and filename of file containing commands for
+initializing the Chart of Accounts
+.Pp
+4. If database already exists, ask for user confirmation before
+destroying it
+.Pp
+5.(Re)create the database
+.Pp
+6. Set up the fiscal year of the database
+.Pp
+7. Set up the initial Chart of Accounts (both the fiscal year and
+the Chart of Accounts can be changed at will later)
+.Pp
+.Pp
+Using \fIdbinit\fP, you can set up as many mdebs databases as you like.  Each
+database covers one fiscal year, or, more precisely, the time between the
+beginning and ending dates specified as arguments to the \fIdbinit\fP script
+when the database was initialized.
+.Pp
+.Pp
+Be careful with \fIdbinit\fP.  I've made an effort to make the script be
+careful and warn the user if an existing database is specified, but it only
+asks once... So keep in mind that you could reinitialize (read lose) a
+database with real data if you're not careful.
+.Pp
+.Pp
+[lsqb  ]This would be a good place for a pointer to a section describing how to back
+up mdebs databases, including instructions on how to restore them from
+backups.]
+.Pp
+.Pp
+Before you first run \fIdbinit\fP, you'll have to edit the script to make sure
+the \fIMDEBSDIR\fP variable points to the directory containing the \fImdebs\fP
+binary.  Read the comments at the beginning of the file; it should be fairly
+self-explanatory.
+.Pp
+.SH Making Backups
+
+.Pp
+After you have used \fImdebs\fP for some time (say, a month or two), you'll
+probably want to start making backups of your data.
+.Pp
+.Pp
+\fIpgcopy-backup\fP
+.Pp
+.Pp
+Description of the pgcopy-backup script.
+.Pp
+.Pp
+\fIpostgres-backup\fP
+.Pp
+.Pp
+Description of teh postgres-backup script.
+.Pp
+.SH Data Structures
+
+.Pp
+\fIfiscyear\fP - Fiscal Year Table
+.Pp
+The table \fIfiscyear\fP defines the fiscal year.
+The field \fIstartd\fP is the starting date, and \fIendd\fP is the ending
+date.
+.Pp
+.nr ll +1
+.nr t\n(ll 0
+.if \n(ll>1 .RS
+.nr bi 1
+.Pp
+startd (DATE)
+.nr bi 1
+.Pp
+endd (DATE)
+.if \n(ll>1 .RE
+.nr ll -1
+.Pp
+.Pp
+\fIosnova\fP - Chart of Accounts Table
+.Pp
+The table \fIosnova\fP defines the Chart of Accounts.  \fIacct\fP is the
+account's code (up to three characters), \fIanal\fP is a two-character
+sub-account (``analytical'') code, and \fIdesig\fP is a description of the
+account.
+.Pp
+.nr ll +1
+.nr t\n(ll 0
+.if \n(ll>1 .RS
+.nr bi 1
+.Pp
+acct (CHAR(3))
+.nr bi 1
+.Pp
+anal (CHAR(2))
+.nr bi 1
+.Pp
+desig (VARCHAR(60))
+.if \n(ll>1 .RE
+.nr ll -1
+.Pp
+.Pp
+\fIdescs\fP - Journal Entry Descriptions Table
+.Pp
+The table \fIdescs\fP holds the journal entries, and contains the fields
+\fIent[lowbar]date\fP (Entry Date) and \fIpor[lowbar]cislo\fP (Serial Number), which
+together constitute a link to the \fIdenik\fP (Journal) table.  In addition,
+\fIdescs\fP contains a field \fIdesig\fP, which describes the journal entry.
+.Pp
+.nr ll +1
+.nr t\n(ll 0
+.if \n(ll>1 .RS
+.nr bi 1
+.Pp
+ent[lowbar]date (DATE)
+.nr bi 1
+.Pp
+por[lowbar]cislo (INT)
+.nr bi 1
+.Pp
+desig (VARCHAR(80))
+.if \n(ll>1 .RE
+.nr ll -1
+.Pp
+.Pp
+\fIporad\fP - Journal Entry Serial Number Table
+.Pp
+The table \fIporad\fP (Serial) is a funny little table made necessary by the
+relationship between the tables \fIdescs\fP and \fIdenik\fP (Journal).  When
+journal entries are being added to the database the program has to be able to
+determine the last serial number used for a particular day.  It does so by
+looking up the value of \fImax[lowbar]cislo\fP (Maximum Number) for the particular day
+in this table.
+.Pp
+.nr ll +1
+.nr t\n(ll 0
+.if \n(ll>1 .RS
+.nr bi 1
+.Pp
+ent[lowbar]date (DATE)
+.nr bi 1
+.Pp
+max[lowbar]cislo (INT)
+.if \n(ll>1 .RE
+.nr ll -1
+.Pp
+.Pp
+\fIdenik\fP - Journal Entry Accounts and Amounts Table
+.Pp
+Last, but certainly not least, is the table \fIdenik\fP (Journal), which contains
+fields describing a journal entry.  The \fIent[lowbar]date\fP and \fIpor[lowbar]cislo\fP
+(Serial Number) fields point to the \fIdescs\fP table.  The \fI[lsqb  ]m]d[lowbar]acct\fP
+(Debit/Credit Major Number) and
+\fI[lsqb  ]m]d[lowbar]anal\fP (Debit/Credit Minor Number) fields point to the \fIosnova\fP (Chart) table (in other words, the
+latter contain account numbers for debit and credit amounts).  The
+\fI[lsqb  ]m]d[lowbar]amt\fP (Debit/Credit Amount) fields contain debit and credit amounts.  Amounts are
+represented as integers in the database.  When asked to display movements on
+accounts, \fImdebs\fP will display the amounts with a decimal point, but this
+is just a cosmetic feature for user comfort.
+Each record is like one line of a journal entry; either the
+debit or the credit side will be zero.  When all entries matching a certain
+date and serial number are added together, the debit and credit sides must
+be equal.
+.Pp
+.nr ll +1
+.nr t\n(ll 0
+.if \n(ll>1 .RS
+.nr bi 1
+.Pp
+ent[lowbar]date (DATE)
+.nr bi 1
+.Pp
+por[lowbar]cislo (INT)
+.nr bi 1
+.Pp
+md[lowbar]acct  (CHAR(3))
+.nr bi 1
+.Pp
+md[lowbar]anal (CHAR(2))
+.nr bi 1
+.Pp
+md[lowbar]amt (INT)
+.nr bi 1
+.Pp
+d[lowbar]acct (CHAR(3))
+.nr bi 1
+.Pp
+d[lowbar]anal (CHAR(2))
+.nr bi 1
+.Pp
+d[lowbar]amt (INT)
+.if \n(ll>1 .RE
+.nr ll -1
+.Pp
+.SH BUGS
+
+.Pp
+Many.  If you find one, please let me know.
+.Pp
+.SH SEE ALSO
+
+.Pp
+postgres(1), PostgreSQL documentation (http://www.postgresql.org)
+.Pp
+Mdebs Home Page: http://web.iol.cz/livingston/mdebs/
+.Pp
+.SH AUTHOR
+
+.Pp
+Nathan L. Cutler livingston@iol.cz
+.Pp

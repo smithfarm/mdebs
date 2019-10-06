@@ -1,0 +1,9 @@
+Here's an example of how to run batch jobs with mdebs.  The principle is
+extremely simple.  Just create a batch file containing mdebs commands and run
+mdebs with this file on the standard input, like so:
+
+$ mdebs <batchfile
+
+One caveat: you have to make sure the batch file contains error-free mdebs
+commands before piping it to mdebs, otherwise mdebs will choke and the results
+could be ugly.  Use batch files with care and keep them as short as possible.

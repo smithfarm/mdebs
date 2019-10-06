@@ -1,0 +1,37 @@
+#include <stdio.h>
+#include <libpq-fe.h>
+
+#define PGRESFUNCERR_NULLQUERY "Null query error"
+#define PGRESFUNCERR_QUERYFAILED "Query failed error"
+#define PGRESFUNCERR_FATAL "Fatal error"
+#define PGRESFUNCERR_OTHERMISC "Other miscellaneous error"
+#define PGRESFUNCERR_FETCHNEXT "Backend reported error processing FETCH NEXT"
+#define PGRESFUNCERR_INTERNAL "Internal (programming) error"
+#define PGRESFUNCERR_BACKENDERR "Backend choked on query"
+
+/* One global variable for debugging purposes */
+int pgdebug;
+
+int runQuery(char *);
+void discardQuery();
+void startTransaction();
+void endTransaction();
+void rollbackTransaction();
+void exit_nicely();
+int openBackend(char *);
+void closeBackend();
+char *getField(char *);
+void fetchAndDisplay(FILE *, char *);
+int fetchNext(char *);
+int moveBack(int, char *);
+
+/* Global variables */
+/* These pointers are necessary to communicate with the backend */
+char *pghost, *pgport, *pgoptions, *pgtty;
+PGconn *conn;
+PGresult *res;
+
+/* Error reporting variables */
+int pgresfunc_ERRNO;
+char *pgresfunc_ERROR;
+

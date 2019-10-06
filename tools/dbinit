@@ -1,0 +1,140 @@
+#!/bin/bash
+
+# This is the dbinit script of mdebs.  It is used to initialize (or re-
+# initialize) an mdebs database.  See the mdebs documentation for details.
+
+# The following line tells the script where to find the mdebs binary.
+# You must edit it for the script to work on your system.  No other user
+# customization is required.
+
+# --------------------v THE USER MUST EDIT THIS LINE v-------------------
+
+declare MDEBSDIR="/home/livingston/src/mdebs-0.09"
+
+# --------------------^ THE USER MUST EDIT THIS LINE ^-------------------
+
+# Optionally set verbosity to ON to see mdebs_msgs
+#declare VERB="-q" 	# Quiet setting
+declare VERB=""  	# Verbose setting
+
+# Clear screen.  I gave up on making this script non-interactive.
+clear
+
+# Print warning message.
+echo "Use this script only to create a completely new mdebs database"
+echo "(i.e., not to recover an existing one from a backup).  You will"
+echo "need a Chart of Accounts initialization file to get through this"
+echo "successfully (see mdebs documentation).  If you want to quit now,"
+echo "press CTRL-C.  Otherwise, press <ENTER> to continue."
+echo
+read a
+clear
+
+# Test if mdebs binary exists and is executable
+if [ -x $MDEBSDIR/mdebs ]
+then
+  echo "mdebs binary found (presumably)"
+else
+  echo "mdebs binary not found! You need to edit the dbinit script first."
+  exit 1
+fi
+
+# Check if MDEBSDB environment variable is defined
+if [ $MDEBSDB ]
+then
+  echo -n "Your MDEBSDB is $MDEBSDB. Is this the database you want to (re)initialize? "
+  read odpoved
+  if [ $odpoved != "y" ]
+  then
+    echo -n "Enter database to (re)initialize: "
+    read MDEBSDB
+  fi
+else
+  echo -n "Your MDEBSDB is undefined.  Enter database to (re)initialize: "
+  read MDEBSDB
+fi
+
+# Error exit if MDEBSDB is still undefined
+if [ -z $MDEBSDB ]
+then
+  echo "Fatal error. MDEBSDB is undefined."
+  exit 1
+fi
+
+# Get fiscal year information
+echo "Now it is time to set up the fiscal year for $MDEBSDB."
+echo -n "Enter the starting date in YYYYMMDD format: "
+read startdate
+if $(`$MDEBSDIR/mdebs --validate=$startdate`)
+then
+  echo "Start date is valid."
+else
+  echo "Fatal error: $startdate is not a valid date!"
+  exit 1;
+fi
+ 
+echo -n "Enter the ending date in YYYYMMDD format: "
+read enddate
+if $(`$MDEBSDIR/mdebs --validate=$enddate`)
+then
+  echo "End date is valid."
+else
+  echo "Fatal error: $enddate is not a valid date!"
+  exit 1
+fi
+ 
+if [ $2 -lt $3 ]
+then
+  echo "Start date is less than end date. OK."
+else
+  echo "Fatal error: Start date ($startdate) is not less than end date ($enddate)!"
+  exit 1
+fi
+
+echo "Enter path (absolute or relative) and filename of Chart of Accounts file"
+echo -n "-> "
+read coapath
+
+if [ -z $coapath ]
+then
+  echo "Fatal error: No Chart of Accounts file given."
+  exit 0
+fi
+
+if [ -e $coapath ]
+then
+  echo "File exists. OK."
+else
+  echo "Fatal error: That file does not exist"
+  exit 0
+fi
+
+# Determine if the database exists
+
+if $(`$MDEBSDIR/mdebs --existdb=$MDEBSDB`)
+then
+  echo "WARNING! $MDEBSDB is an existing database!!!"
+  echo -n "About to destroy database $MDEBSDB.  Continue? (y/n) "
+  read pokracovat
+  if [ $pokracovat != "y" ]
+  then
+    exit 0;
+  fi
+  dropdb $MDEBSDB
+  echo "Old database destroyed."
+else
+  echo "$MDEBSDB does not exist. OK."
+fi
+
+# create a new, blank slate
+createdb $MDEBSDB
+echo "New database created."
+
+# initialize the new database (set up tables, mainly)
+$MDEBSDIR/mdebs --db=$MDEBSDB --initialize
+
+# set up the fiscal year
+( echo "insert fiscal $startdate $enddate" ; echo "bye" ) | $MDEBSDIR/mdebs $VERB --db=$MDEBSDB
+
+# set up the Chart of Accounts
+( cat $coapath ; echo ; echo "bye" ) | $MDEBSDIR/mdebs $VERB --db=$MDEBSDB

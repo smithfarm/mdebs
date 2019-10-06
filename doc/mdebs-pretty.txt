@@ -1,0 +1,990 @@
+  The Minimalistic Double-Entry Bookkeeping System
+  Nathan L. Cutler
+  December 27, 1998
+  ____________________________________________________________
+
+  Table of Contents
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  1. Introduction
+
+     1.1 Version Number
+     1.2 Description
+     1.3 Copyright and Warranty Information
+     1.4 A Few Words from the Author
+     1.5 Stage of Development
+     1.6 Source and Binary Distributions
+
+  2. Getting Started
+
+     2.1 Obtaining the Newest Version
+     2.2 Installing PostgreSQL
+     2.3 Building mdebs
+        2.3.1 System Requirements
+        2.3.2 Build Procedure
+     2.4 Setting Up Your Installation
+     2.5 Installation
+
+  3. Running mdebs
+
+     3.1 Command Line Options
+     3.2 Environment Variables
+     3.3 Files
+        3.3.1 $MDEBSDIR (top-level directory of distribution)
+        3.3.2 $MDEBSDIR/doc/*
+        3.3.3 $MDEBSDIR/extras/*
+        3.3.4 $MDEBSDIR/tools/*
+           3.3.4.1 dbinit - Database (re)initialization script
+           3.3.4.2 pgcopy-backup
+           3.3.4.3 postgres-backup
+
+  4. Fundamental Principles
+
+     4.1 Dates
+     4.2 Accounts
+     4.3 Account Shortcuts
+     4.4 Monetary Amounts
+     4.5 Account Document Field
+     4.6 Chart of Accounts
+     4.7 Making Journal Entries
+
+  5. Command Syntax
+
+  6. Other Considerations
+
+     6.1 Making Backups
+     6.2 Making Bug Reports
+     6.3 Tweaking for Speed
+     6.4 Translating mdebs into Other Languages
+
+  7. Data Structures
+
+     7.1 fiscyear - Fiscal Year Table
+     7.2 osnova - Chart of Accounts Table
+     7.3 descs - Journal Entry Descriptions Table
+     7.4 porad - Journal Entry Serial Number Table
+     7.5 denik - Journal Entry Accounts and Amounts Table
+
+
+  ______________________________________________________________________
+
+  11..  IInnttrroodduuccttiioonn
+
+
+
+  11..11..  VVeerrssiioonn NNuummbbeerr
+
+  When this documentation was written, the current _m_d_e_b_s version was
+  0.04.
+
+
+  11..22..  DDeessccrriippttiioonn
+
+  The Minimalistic Double-Entry Bookkeeping System (_m_d_e_b_s) is a program
+  whose goal is to provide a solution for those who need to do double-
+  entry bookkeeping under Linux.
+
+  _m_d_e_b_s is a program written in ANSI C, supported by some shell scripts
+  running under bash, and a database implemented using the PostgreSQL
+  (see http://www.postgresql.org/) backend.
+
+
+  11..33..  CCooppyyrriigghhtt aanndd WWaarrrraannttyy IInnffoorrmmaattiioonn
+
+  The _m_d_e_b_s program and this documentation is Copyright (C) 1997,1998 by
+  Nathan L. Cutler (the ``Author'').
+
+  The Author has released _m_d_e_b_s under the terms of the GNU General
+  Public License (GPL), Version 2.  A copy of the GPL is provided in the
+  top-level directory of the source code distribution in the file
+  ``COPYING''.
+
+  If you modify _m_d_e_b_s (read the Gnu General Public License before doing
+  so), please document your modifications in file separate from this
+  documentation.
+
+  This program is distributed in the hope that it will be useful, but
+  WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+  General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with this program;  if not, write to the Free Software
+  Foundation, Inc., 675 Mass Ave., Cambridge, MA 02139, USA.
+
+
+  11..44..  AA FFeeww WWoorrddss ffrroomm tthhee AAuutthhoorr
+
+  I decided to write _m_d_e_b_s because I couldn't find any free software
+  that did double-entry bookkeeping.  The philosophy of _m_d_e_b_s is to keep
+  things simple; hence the word ``Minimalistic'' in the title.
+
+  Being ``minimalistic'', mdebs does only those tasks that its author
+  considers essential to double-entry bookkeeping.  With mdebs, you can
+  set up a Chart of Accounts, make and browse journal entries, and
+  review movements on any account over a specified time period.
+
+  mdebs is designed to be able to be run in "batch mode", taking
+  commands from standard input.  This means you can write scripts to do
+  some of the work for you.  Theoretically, _m_d_e_b_s could be used as a
+  back-end or engine for some kind of GUI-based bookkeeping program.
+
+
+  11..55..  SSttaaggee ooff DDeevveellooppmmeenntt
+
+  While _m_d_e_b_s is referred to as ``alpha'' software, you should feel free
+  to try it out and send your comments and constructive criticism to the
+  author, who will be glad to know that someone is using his program.
+
+
+
+  11..66..  SSoouurrccee aanndd BBiinnaarryy DDiissttrriibbuuttiioonnss
+
+  Currently, _m_d_e_b_s is only available in a source-code distribution.  If
+  you think I should make a binary distribution available, please let me
+  know.  If you would like to package _m_d_e_b_s for a popular Linux
+  distribution, please go ahead.  I will try to provide any necessary
+  assistance, but make no promises.
+
+
+  22..  GGeettttiinngg SSttaarrtteedd
+
+  22..11..  OObbttaaiinniinngg tthhee NNeewweesstt VVeerrssiioonn
+
+  The newest release of _m_d_e_b_s is available on
+  http://web.iol.cz/livingston/mdebs/
+
+
+  22..22..  IInnssttaalllliinngg PPoossttggrreeSSQQLL
+
+  Before you bother trying to do anything with _m_d_e_b_s, you have to
+  install PostgreSQL.  I recommend using a pre-packaged binary version
+  of PostgreSQL instead of building it from source, unless you are a
+  masochist or are trying to prove something.
+
+  As of this writing, the Author was using PostgreSQL version 6.1.  Use
+  earlier versions at your own risk!  Be sure to read the release notes
+  of whatever version you end up downloading.  Documentation is not one
+  of PostgreSQL's strong points, but it is there.  There's also a
+  Database HOWTO which covers PostgreSQL.
+
+  More information about PostgreSQL is available on
+  http://www.postgresql.org/
+
+
+  22..33..  BBuuiillddiinngg mmddeebbss
+
+  22..33..11..  SSyysstteemm RReeqquuiirreemmeennttss
+
+  In order to build _m_d_e_b_s, you must have functional installations of
+  _g_c_c, _P_o_s_t_g_r_e_S_Q_L (including developer stuff such as include files and
+  libraries), _G_N_U _m_a_k_e, and _G_N_U _r_e_a_d_l_i_n_e.
+
+  Certain source code files are generated using _b_i_s_o_n and _f_l_e_x.  If you
+  need to regenerate these files (unlikely), you will of course have to
+  install these fine development tools as well.
+
+  The Author uses the Debian distribution, which contains packaged
+  binary versions of all of the above software, and much, much more.
+
+
+  22..33..22..  BBuuiilldd PPrroocceedduurree
+
+  SStteepp 11.. Make sure that the paths in the top-level _M_a_k_e_f_i_l_e point to
+  the correct locations of _l_i_b_p_q_-_f_e_._h and _l_i_b_p_q_._s_o on your system.  On
+  mine, they're in /usr/include/postgresql and /usr/lib/postgresql/lib.
+  The Makefile in the distribution should work on Debian 2.0 and higher
+  systems using the _p_o_s_t_g_r_e_s_q_l and _p_o_s_t_g_r_e_s_q_l_-_d_e_v Debian packages.  I'm
+  not sure about Red Hat, Slackware, or other distributions.
+
+
+  SStteepp 22.. Then type ``make''.  There should be no compiler warnings.
+  The _m_d_e_b_s binary will be generated in the top level directory.  You
+  may want to move it to /usr/local/bin.  No man pages are provided.
+  This document is the only documentation there is at this point.
+
+
+  22..44..  SSeettttiinngg UUpp YYoouurr IInnssttaallllaattiioonn
+
+  After you successfully build _m_d_e_b_s, you'll need to do several things
+  before you run the _m_d_e_b_s binary.
+
+
+  To wit:
+
+
+  1. Make sure you or your users have the appropriate PostgreSQL
+     privileges.  Use the _c_r_e_a_t_e_u_s_e_r command that comes with PostgreSQL
+     for this.  Another option is to always run _m_d_e_b_s as user postgres,
+     but this is probably not a good idea unless you're running a
+     single-user system.
+
+  2. Prepare an _m_d_e_b_s batch file with commands to enter your Chart of
+     Accounts into the database.  Use the chart.mdebs batchfile in the
+     ./examples directory as a model.  See also the section on _m_d_e_b_s
+     principles, below.  It is important to go over the batch file
+     carefully before running _m_d_e_b_s to make sure all of the lines in it
+     are either comments (starting with #) or valid _m_d_e_b_s _I_N_S_E_R_T _C_H_A_R_T
+     commands.  Otherwise, _m_d_e_b_s will choke on them when _d_b_i_n_i_t is run
+     (see next item) and your database will not be properly initialized.
+
+  3. Use the _d_b_i_n_i_t script (in the _t_o_o_l_s directory of the _m_d_e_b_s source
+     distribution) to create and initialize an mdebs database and set up
+     its fiscal year and Chart of Accounts.  See the discussion of
+     _d_b_i_n_i_t in the Bash Scripts section, below, for details.
+
+  4. Assuming that you'll be using only one _m_d_e_b_s database at a time
+     (e.g., the current year's bookkeeping for your company), add a line
+     similar to export MDEBSDB="books1998" to your profile (I use
+     _~_/_._b_a_s_h___p_r_o_f_i_l_e).  _m_d_e_b_s also has a facility for specifying the
+     database on the command line.  Type mdebs -h for details.
+
+
+  22..55..  IInnssttaallllaattiioonn
+
+  After you've built _m_d_e_b_s, the next step is to install it.  You can do
+  that by copying the binary to a directory somewhere in your PATH.
+  Note that some (all?) of the scripts in the ./tools directory don't
+  assume the binary is in the PATH and require some user editing before
+  being run.  See the ./tools directory and the Shell Scripts section,
+  below, for details.
+
+  An integral part of installation is installing the documentation.  At
+  this time there is no man page, because this documentation is being
+  written on an old version of sgml-tools that has a broken man page
+  generator.  The file ./doc/mdebs.sgml is the source code for this
+  documentation and ./doc/mdebs.txt is the resulting output.  For best
+  viewing results, use _l_e_s_s.  A "stripped" version, with no bolding or
+  underlining, is also included.  I've also left the dvi and html
+  versions generated by sgml-tools, in the hope they will be useful.
+
+
+  33..  RRuunnnniinngg mmddeebbss
+
+  _m_d_e_b_s comes with a number of command line options and environment
+  variables to influence how _m_d_e_b_s behaves when it is run.  Some of the
+  command line options (the ones without short equivalents) are intended
+  for use from bash scripts and the like and do not produce any output.
+
+
+
+
+
+  33..11..  CCoommmmaanndd LLiinnee OOppttiioonnss
+
+  The _m_d_e_b_s command line looks like this:
+
+
+
+       mdebs [options]
+
+
+
+
+  where [options] can be one or more of the following:
+
+
+     ----hheellpp||--hh
+        Print out a helpful message.
+
+      ----vveerrssiioonn||--vv
+        Version information.
+
+     ----pprroommpptt||--pp ((aarrgg))
+        Sets prompt for mdebs to use
+
+     ----vveerrbboossee||--VV
+        Instructs mdebs to be more verbose.  This has the effect of
+        displaying "mdebs_msg" priority messages and can generally be
+        considered useful.
+
+     ----ddbb||--DD ((aarrgg))
+        Instructs mdebs to use a database different than MDEBSDB
+
+     ----vvaalliiddaattee ((aarrgg))
+        (Intended for use from shell scripts) Instructs mdebs to check a
+        string to see whether it constitutes a valid YYYYMMDD format
+        date.
+
+     ----iinniittiiaalliizzee
+        (Intended for use from shell scripts) Instructs mdebs to set up
+        a table structure in the database pointed to by MDEBSDB, which
+        is assumed to be empty.
+
+     ----eexxiissttddbb ((aarrgg))
+        (Intended for use from shell scripts) Determine if a database
+        exists
+
+
+  33..22..  EEnnvviirroonnmmeenntt VVaarriiaabblleess
+
+
+     MMDDEEBBSSDDBB
+        Database to use when mdebs is invoked.
+
+     PPAAGGEERR
+        Pager to invoke when browsing query results.
+
+     HHOOMMEE
+        Full path of the user's home directory.
+
+     TTMMPPDDIIRR
+        Where to store temporary files.
+
+     MMDDEEBBSSDDIIRR
+        Full path of the mdebs installation (src) directory.
+
+
+
+  33..33..  FFiilleess
+
+  33..33..11..  $$MMDDEEBBSSDDIIRR ((ttoopp--lleevveell ddiirreeccttoorryy ooff ddiissttrriibbuuttiioonn))
+
+  This directory contains the ``guts'' of _m_d_e_b_s, to wit:
+
+     GGPPLL
+        The GNU General Public License, Version 2, under which _m_d_e_b_s is
+        distributed.
+
+     MMaakkeeffiillee
+        The file used by _G_N_U _m_a_k_e to govern the build process.
+
+     RREEAADDMMEE
+        A brief description of _m_d_e_b_s.
+
+     ddbbiinniitt..cc aanndd ddbbiinniitt..hh
+        C source code of the function(s) for initializing new databases.
+        Contains the SQL CREATE TABLE queries.
+
+     ddeelleettee..cc aanndd ddeelleettee..hh
+        C source code of functions used to delete _m_d_e_b_s objects such as
+        Chart of Accounts entries, journal entries, etc.
+
+     ddoocc ssuubbddiirreeccttoorryy
+        Directory containing the _m_d_e_b_s documentation (see below).
+
+     dduummpp..cc aanndd dduummpp..hh
+        C source code of functions used to generate _m_d_e_b_s ``reports'',
+        i.e. lists of accounts, journal entries, etc.
+
+     eennvviirroo..cc aanndd eennvviirroo..hh
+        C source code of functions used to query and manipulate
+        environment variables, mainly MDEBSDB.  This allows the user to
+        dynamically change from one database to another without exiting
+        _m_d_e_b_s.
+
+     eexxaammpplleess ssuubbddiirreeccttoorryy
+        This subdirectory contains examples illustrating how _m_d_e_b_s can
+        be used in ``batch mode''.  One of the examples is a sample
+        Chart of Accounts initialization file intended for use with the
+        dbinit script, which is in the tools subdirectory.
+
+     eexxttrraass ssuubbddiirreeccttoorryy
+        Examples of how _m_d_e_b_s can be used as a ``back-end'' to shell
+        scripts to ease the process of journal entry.  These examples
+        assume you have _d_i_a_l_o_g installed.  [Anything else in here?]
+
+     ggeenneerraalliizzeedd..cc aanndd ggeenneerraalliizzeedd..hh
+        As their names would suggest, these files contain ``library''
+        functions that are used throughout _m_d_e_b_s to do things like check
+        date formats, etc.
+
+     iinnsseerrtt..cc aanndd iinnsseerrtt..hh
+        C source code of functions used to insert all types of _m_d_e_b_s
+        data objects except journal entries.
+
+     jjoouurrnnaall..cc aanndd jjoouurrnnaall..hh
+        C source code of functions dealing with journal entries.
+
+     lleexx..yyyy..cc
+        Lexical scanner created by _f_l_e_x from the mdebs.yy file.
+        Included in the distribution to reduce the number of software
+        packages that have to be installed in order to build _m_d_e_b_s.
+
+
+     mmddeebbss
+        The mdebs binary.
+
+     mmddeebbss..hh
+        Include file containing declarations and pre-processor
+        directives intended to be global to all _m_d_e_b_s functions.
+
+     mmddeebbss..ttaabb..cc aanndd mmddeebbss..ttaabb..hh
+        C source code files generated by _b_i_s_o_n from the mdebs.y file.
+        This is where the main() function is located.  This is where
+        command-line parameters get processed, user input gets parsed,
+        etc.
+
+     mmddeebbss..yy aanndd mmddeebbss..yyyy
+        Files containing source intended for processing by _b_i_s_o_n and
+        _f_l_e_x, respectively.  These files define how the parsing engine
+        behaves.
+
+     mmeessssaaggeess--EENN..hh ffiillee aanndd mmeessssaaggeess..hh ssyymmbboolliicc lliinnkk
+        Include file containing pre-processor directives that define the
+        text of various messages and output that may be generated by
+        _m_d_e_b_s from time to time.  See the section ``Translating _m_d_e_b_s
+        into other languages'', below.
+
+     mmeessssaaggeess..cc
+        C source code of functions used to ``say'' things to the user.
+        This is to be distinguished from the code used to generate
+        ``reports'' (account listings, journal listings, etc.)  The
+        format of these listings and their column headings are hardwired
+        for the time being.  See the section ``Translating _m_d_e_b_s into
+        other languages'', below.
+
+     ppggrreessffuunncc..cc aanndd ppggrreessffuunncc..hh
+        C source code of functions used to communicate with the
+        PostgreSQL back-end.
+
+     qquueerryy..cc aanndd qquueerryy..hh
+        C source code of functions used to process _m_d_e_b_s commands that
+        start with QUERY.
+
+     ssccrraattcchh ssuubbddiirreeccttoorryy
+        Subdirectory containing junk files I haven't gotten up the
+        courage to delete yet.  (Hey, that might be useful someday!)
+
+     ttookkeennlleenn..hh
+        Include file used in mdebs.y and mdebs.yy.  Something to do with
+        the parser.
+
+     ttoooollss ssuubbddiirreeccttoorryy
+        Subdirectory containing shell scripts for use in administering
+        _m_d_e_b_s.  See the discussion of the tools subdirectory, below.
+
+
+  33..33..22..  $$MMDDEEBBSSDDIIRR//ddoocc//**
+
+  Files that, taken as a whole, constitute the documentation to _m_d_e_b_s.
+
+
+     FFiillee 11
+
+     FFiillee 22,, eettcc..
+
+
+
+
+
+  33..33..33..  $$MMDDEEBBSSDDIIRR//eexxttrraass//**
+
+  Various goodies.
+
+
+     FFiillee 11
+
+     FFiillee 22,, eettcc..
+
+
+  33..33..44..  $$MMDDEEBBSSDDIIRR//ttoooollss//**
+
+  Shell scripts for use in administering mdebs.  I'll sacrifice the
+  structural purity of this document and put the documentation to these
+  scripts here.
+
+
+  33..33..44..11..  ddbbiinniitt -- DDaattaabbaassee ((rree))iinniittiiaalliizzaattiioonn ssccrriipptt
+
+  Like _m_d_e_b_s itself, _d_b_i_n_i_t gets the name of the database to be
+  initialized from the _M_D_E_B_S_D_B environment variable.  The algorithm that
+  _d_b_i_n_i_t uses can be summarized as follows:
+
+
+  1. If MDEBSDB enviro-variable is defined, ask user if s/he wants to
+     use this as the database to be (re)initialized; if not, ask user
+     for different database name
+
+  2. Get fiscal year starting and ending dates from user
+
+  3. Get path and filename of file containing commands for initializing
+     the Chart of Accounts
+
+  4. If database already exists, ask for user confirmation before
+     destroying it
+
+  5. (Re)create the database
+
+  6. Set up the fiscal year of the database
+
+  7. Set up the initial Chart of Accounts (both the fiscal year and the
+     Chart of Accounts can be changed at will later)
+
+
+  Using _d_b_i_n_i_t, you can set up as many mdebs databases as you like.
+  Each database covers one fiscal year, or, more precisely, the time
+  between the beginning and ending dates specified as arguments to the
+  _d_b_i_n_i_t script when the database was initialized.
+
+
+  Be careful with _d_b_i_n_i_t.  I've made an effort to make the script be
+  careful and warn the user if an existing database is specified, but it
+  only asks once... So keep in mind that you could reinitialize (read
+  lose) a database with real data if you're not careful.
+
+
+  [This would be a good place for a pointer to a section describing how
+  to back up mdebs databases, including instructions on how to restore
+  them from backups.]
+
+
+  Before you first run _d_b_i_n_i_t, you'll have to edit the script to make
+  sure the _M_D_E_B_S_D_I_R variable points to the directory containing the
+  _m_d_e_b_s binary.  Read the comments at the beginning of the file; it
+  should be fairly self-explanatory.
+
+  33..33..44..22..  ppggccooppyy--bbaacckkuupp
+
+  Description of the pgcopy-backup script.
+
+
+  33..33..44..33..  ppoossttggrreess--bbaacckkuupp
+
+  Description of teh postgres-backup script.
+
+
+
+  44..  FFuunnddaammeennttaall PPrriinncciipplleess
+
+  44..11..  DDaatteess
+
+  Dates must always be specified in the format _Y_Y_Y_Y_M_M_D_D.  That means
+  19980101 is January 1, 1998 and 19981231 is December 31, 1998.  Don't
+  even think of asking me to change this.
+
+
+  44..22..  AAccccoouunnttss
+
+  Accounts are referred to as _[_m_a_j_o_r_-_n_u_m_b_e_r_] _[_s_p_a_c_e_] _[_h_y_p_h_e_n_] _[_m_i_n_o_r_-
+  _n_u_m_b_e_r_].  The major number is a three-digit numeric string (000-999)
+  and the minor number is a two-digit numeric string (00-99).  You can
+  use an asterisk (``*'') instead of the minor number in some cases to
+  refer to all accounts with a particular major number.  Examples of
+  valid account numbers are
+
+
+
+       010 - 01
+       910 - 00
+       222 - *
+
+
+
+
+
+  The above needs to be changed to [major-number][hyphen][major-number]
+  by revising the lexical rules, the bison mdebs.y file, and
+  implementing functions to parse the major and minor numbers out of the
+  string.  All 222 accounts could be specified either as "222-" or
+  "222-*".
+
+
+  44..33..  AAccccoouunntt SShhoorrttccuuttss
+
+  Need to write code and change table structure to enable use of
+  "Account Shortcuts", i.e. a VARCHAR-type account identification field
+  to provide: (a) an alternate account naming scheme that's more
+  flexible and user-friendly than the major-minor number scheme, which
+  is taken from Czech Republic accounting legislation, and (b) a way to
+  allow the user to group items together without making exceptions to
+  the major-minor numbers; this would be useful, for example, to a
+  manager who wants to monitor the costliness of a project.  Just set up
+  an Account Shortcut for the project (call it "PROJ1") and include that
+  in all entries related to the project. Then run a DUMP SHORTCUT PROJ1
+  command in _m_d_e_b_s.
+
+  The shortcuts code has to make sure that the shortcut is optional.
+
+
+
+
+
+  44..44..  MMoonneettaarryy AAmmoouunnttss
+
+  _m_d_e_b_s assumes that all monetary amounts will be entered in a currency
+  that can be broken down into 100 smaller units (i.e. dollars/cents,
+  pounds/pence, marks/pfennigs, korunas/hellers, etc.).  It further
+  assumes that monetary amounts will be entered as integers in the
+  smaller units.  If you're keeping your books in dollars, this means
+  you must enter all amounts in cents.  Thus, for _m_d_e_b_s 100 means one
+  dollar, 101 means $1.01, etc.  When _m_d_e_b_s prints out information, it
+  puts in the decimal point, but it won't accept decimal input.  This
+  can be confusing at first.
+
+
+  44..55..  AAccccoouunntt DDooccuummeenntt FFiieelldd
+
+
+
+       [Need to implement and document; should be fairly straightforward.]
+
+
+
+
+
+  44..66..  CChhaarrtt ooff AAccccoouunnttss
+
+  If you're interested in using _m_d_e_b_s, you either already know all about
+  double-entry bookkeeping and already have a Chart of Accounts for your
+  company, in which case it's just a matter of converting your account
+  number scheme to use the _m_d_e_b_s convention (see above), or you figure
+  you're going to use _m_d_e_b_s to learn about double-entry bookkeeping, in
+  which case you can easily use the example Chart of Accounts provided
+  in the _c_h_a_r_t_._m_d_e_b_s batchfile in the _e_x_a_m_p_l_e_s directory of the source
+  distribution.
+
+
+
+       [Talk about using Account Shortcuts as an alternate or supplemental account
+       specification system.]
+
+
+
+
+
+  44..77..  MMaakkiinngg JJoouurrnnaall EEnnttrriieess
+
+  When you run _m_d_e_b_s from the shell prompt with the _M_D_E_B_S_D_B environment
+  variable pointing to an initialized _m_d_e_b_s database, you are presented
+  with an _m_d_e_b_s prompt.  At this prompt you can either enter an _m_d_e_b_s
+  command (see section on Command Syntax, below), or begin a journal
+  entry.
+
+
+  Journal entries consist of a first line, containing the date and
+  description of the journal entry in the format _Y_Y_Y_Y_M_M_D_D _"_t_e_x_t_" (the
+  quotes are necessary if the description is to consist of more than one
+  word), and at least two lines describing movements on various
+  accounts.  For example, if your company issues an invoice for services
+  rendered, you might make a journal entry called "Invoice for services
+  rendered" with a debit entry to Accounts Receivable and a credit entry
+  to Revenues.  Assuming that ``311 - 00'' is your Accounts Receivable
+  account and ``518 - 00'' is your Revenues account, your journal entry
+  might look something like this:
+
+
+
+
+  mdebs-> 19980101 "Invoice for services rendered"
+  mdebs-> 311 - 00 12100 0
+  mdebs-> 518 - 00 0 12100
+  mdebs->
+
+
+
+
+
+  The ending newline signals _m_d_e_b_s the end of the journal entry.  If the
+  journal entry passes the various checks (valid date, existing
+  accounts, and balanced debit/credit sides), _m_d_e_b_s will insert the
+  entry into the database.
+
+
+  Journal entries can be more complicated.  For example, in some parts
+  of the world, companies have to charge VAT on their invoices.
+  Assuming a VAT rate of 5% and assuming the appropriate VAT account is
+  ``343 - 01'', the above journal entry might look like this:
+
+
+
+       mdebs-> 19980101 "Invoice for services rendered"
+       mdebs-> 311 - 00 12100 0
+       mdebs-> 343 - 01 0 576
+       mdebs-> 518 - 00 0 11524
+       mdebs->
+
+
+
+
+
+  Take extra special care to avoid making duplicate journal entries.  My
+  method for avoiding this is to keep accounting documents (invoices,
+  receipts, etc.) in a pile until I sit down to do bookkeeping.  As I
+  make journal entries for each accounting document, I put them in a
+  binder.  This helps keep the paper documentation in line with the
+  books in the computer.
+
+
+  55..  CCoommmmaanndd SSyynnttaaxx
+
+  _m_d_e_b_s commands consist of three components: "verb" (e.g., DUMP, QUERY,
+  INSERT) indicating what type of operation to perform, an "object"
+  (e.g., JOURNAL, CHART, ACCOUNT) indicating the type of data to be used
+  in the operation, and "the rest", which varies from case to case
+  (could be a range of dates for a DUMP command, or data to be inserted
+  in the case of an INSERT).
+
+
+  Commands are to be distinguished from journal entries, which are
+  complex and use a completely different syntax.  Commands are always
+  entered on a single line, whereas journal entries take up several
+  lines.  Journal entries are discussed in the Fundamental Principles
+  section, above.
+
+
+  _D_U_M_P
+
+
+  These commands generate ("dump") reports, or lists, of accounting
+  data.
+
+
+  _D_U_M_P _C_H_A_R_T
+
+  Lists the Chart of Accounts.
+
+
+  The command takes no arguments.  Its output is a table describing the
+  Chart of Accounts for the current database.
+
+
+  _D_U_M_P _A_C_C_O_U_N_T
+
+
+  Generates a report giving movements on an account over a specified
+  time period.
+
+
+  The command takes an account number (or shortcut) argument and an
+  optional date range.  If no date range is specified, the entire fiscal
+  year is assumed.  The command's output is a table containing all
+  movements on the given account during the period specified.  At the
+  end, debit and credit totals are written.  This program can be useful
+  in monthly, quarterly, and annual closings, VAT closings, etc.  If the
+  beginning and ending dates are the same, it prints out all movements
+  for a particular day.
+
+
+  A series of _D_U_M_P _A_C_C_O_U_N_T commands could be used to print out a General
+  Ledger for any given period.
+
+
+  _D_U_M_P _J_O_U_R_N_A_L (see _Q_U_E_R_Y _J_O_U_R_N_A_L_)
+
+
+  Dumps the journal (book of original entry) for specified date range.
+
+
+  _Q_U_E_R_Y
+
+
+  These commands generally output a single item, or are used to
+  determine whether something exists or not.
+
+
+  _Q_U_E_R_Y _J_O_U_R_N_A_L _[_d_a_t_e_] _[_s_e_r___n_u_m_]
+
+
+  Given a date and serial number of a particular journal entry, this
+  command outputs the journal entry as it might look in an actual
+  journal.  This command can be used in conjunction with _D_U_M_P _A_C_C_O_U_N_T to
+  analyze account movements.
+
+
+  _[_V_a_r_i_o_u_s _s_h_e_l_l _s_c_r_i_p_t_s _f_o_r _m_a_k_i_n_g _j_o_u_r_n_a_l _e_n_t_r_i_e_s_]
+
+  These shell scripts use the _d_i_a_l_o_g program in an attempt to provide a
+  user-friendly way to enter journal entries into datafiles.  Just
+  choose the type of journal entry you want to make, provide the correct
+  information, and the script runs _m_d_e_b_s for you.
+
+
+  66..  OOtthheerr CCoonnssiiddeerraattiioonnss
+
+  66..11..  MMaakkiinngg BBaacckkuuppss
+
+  After you have used _m_d_e_b_s for some time (say, a month or two), you'll
+  probably want to start making backups of your data.
+
+
+  66..22..  MMaakkiinngg BBuugg RReeppoorrttss
+
+  Send bug reports to the Author.
+
+
+  66..33..  TTwweeaakkiinngg ffoorr SSppeeeedd
+
+  You may find _m_d_e_b_s a bit slow.  One possible reaons is that it uses
+  relational SQL queries that take time for the PostgreSQL back-end to
+  process.  Another possible reason is that you have no indices.
+
+
+
+       [ Section on creating and updating indices? ]
+       [ What indices are most useful? ]
+       [ How fast is mdebs on the author's system? ]
+
+
+
+
+
+  66..44..  TTrraannssllaattiinngg mmddeebbss iinnttoo OOtthheerr LLaanngguuaaggeess
+
+  The Author has made an attempt to ``facilitate'' the translation of
+  _m_d_e_b_s into other languages.  Messages are divided into three priority
+  levels:  Error, Result, and Message.  When _m_d_e_b_s is run in ``quiet''
+  mode (without the --verbose switch), Message-priority messages are
+  suppressed.  Error messages and Results (i.e., messages produced in
+  response to a user command) are never suppressed.  Each message is
+  defined using a pre-processor directive, as opposed to appearing
+  embedded in the guts of the code.  To translate _m_d_e_b_s to another
+  language, copy messages-EN.h to a file such as messages-CZ.h (for the
+  Czech language, for instance), translate the text of all the messages,
+  change the messages.h symbolic link to point to messages-CZ.h, and
+  rebuild _m_d_e_b_s.
+
+  This is an interim solution; I should be using i18n message catalogs
+  but I haven't gotten around to that yet.
+
+
+  77..  DDaattaa SSttrruuccttuurreess
+
+  77..11..  ffiissccyyeeaarr -- FFiissccaall YYeeaarr TTaabbllee
+
+  The table _f_i_s_c_y_e_a_r defines the fiscal year.  The field _s_t_a_r_t_d is the
+  starting date, and _e_n_d_d is the ending date.
+
+
+  +o  startd (DATE)
+
+  +o  endd (DATE)
+
+
+  77..22..  oossnnoovvaa -- CChhaarrtt ooff AAccccoouunnttss TTaabbllee
+
+  The table _o_s_n_o_v_a defines the Chart of Accounts.  _a_c_c_t is the account's
+  code (up to three characters), _a_n_a_l is a two-character sub-account
+  (``analytical'') code, and _d_e_s_i_g is a description of the account.
+
+
+  +o  acct (CHAR(3))
+
+  +o  anal (CHAR(2))
+
+  +o  desig (VARCHAR(60))
+
+  77..33..  ddeessccss -- JJoouurrnnaall EEnnttrryy DDeessccrriippttiioonnss TTaabbllee
+
+  The table _d_e_s_c_s holds the journal entries, and contains the fields
+  _e_n_t___d_a_t_e (Entry Date) and _p_o_r___c_i_s_l_o (Serial Number), which together
+  constitute a link to the _d_e_n_i_k (Journal) table.  In addition, _d_e_s_c_s
+  contains a field _d_e_s_i_g, which describes the journal entry.
+
+
+  +o  ent_date (DATE)
+
+  +o  por_cislo (INT)
+
+  +o  desig (VARCHAR(80))
+
+
+  77..44..  ppoorraadd -- JJoouurrnnaall EEnnttrryy SSeerriiaall NNuummbbeerr TTaabbllee
+
+  The table _p_o_r_a_d (Serial) is a funny little table made necessary by the
+  relationship between the tables _d_e_s_c_s and _d_e_n_i_k (Journal).  When
+  journal entries are being added to the database the program has to be
+  able to determine the last serial number used for a particular day.
+  It does so by looking up the value of _m_a_x___c_i_s_l_o (Maximum Number) for
+  the particular day in this table.
+
+
+  +o  ent_date (DATE)
+
+  +o  max_cislo (INT)
+
+
+  77..55..  ddeenniikk -- JJoouurrnnaall EEnnttrryy AAccccoouunnttss aanndd AAmmoouunnttss TTaabbllee
+
+  Last, but certainly not least, is the table _d_e_n_i_k (Journal), which
+  contains fields describing a journal entry.  The _e_n_t___d_a_t_e and
+  _p_o_r___c_i_s_l_o (Serial Number) fields point to the _d_e_s_c_s table.  The
+  _[_m_]_d___a_c_c_t (Debit/Credit Major Number) and _[_m_]_d___a_n_a_l (Debit/Credit
+  Minor Number) fields point to the _o_s_n_o_v_a (Chart) table (in other
+  words, the latter contain account numbers for debit and credit
+  amounts).  The _[_m_]_d___a_m_t (Debit/Credit Amount) fields contain debit and
+  credit amounts.  Amounts are represented as integers in the database.
+  When asked to display movements on accounts, _m_d_e_b_s will display the
+  amounts with a decimal point, but this is just a cosmetic feature for
+  user comfort.  Each record is like one line of a journal entry; either
+  the debit or the credit side will be zero.  When all entries matching
+  a certain date and serial number are added together, the debit and
+  credit sides must be equal.
+
+
+  +o  ent_date (DATE)
+
+  +o  por_cislo (INT)
+
+  +o  md_acct (CHAR(3))
+
+  +o  md_anal (CHAR(2))
+
+  +o  md_amt (INT)
+
+  +o  d_acct (CHAR(3))
+
+  +o  d_anal (CHAR(2))
+
+  +o  d_amt (INT)
+
+
+

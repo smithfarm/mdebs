@@ -1,0 +1,348 @@
+#include "pgresfunc.h"
+
+/*
+ * pgresfunc.c
+ *
+ * Various functions to make PostgreSQL programming more humane
+ * 
+ * An attempt has been made to make this file "portable"; i.e. not limited
+ * to mdebs.  Thus, no mdebs global variables are used and the functions do
+ * not produce any output if debugging is turned off (of course, fatal
+ * errors may produce output regardless of debug setting).
+ *
+ * Debugging is turned on and off using the appropriate macro in
+ * pgresfunc.h
+ */
+
+/*
+ * openBackend()
+ *
+ * Open a connection to the PostgreSQL backend running on the local
+ * machine.
+ *
+ * Takes one parameter:  a database name 
+ *
+ * Opens the database whose name is given in the parameter string.
+ * The calling function is responsible for ensuring the parameter is valid.
+ *
+ * In the event the parameter is NULL, the function issues a warning and sets
+ * up a connection to the "template1" database, which is documented in the man
+ * page to the "initdb" command in the PostgreSQL installation.  Assuming
+ * the local PostgreSQL installation is not broken, this means that
+ * openBackend((char *)NULL) will open a connection to the PostgreSQL
+ * backend, allowing the calling process to query the system tables.  Thus,
+ * one way to determine if a database exists before opening it is to first
+ * call openBackend with NULL, query the system table pg_database to
+ * determine whether a given database name exists, close the backend
+ * connection with closeBackend and then call openBackend again with the
+ * verified database name.
+ *
+ * Function return values:
+ *   -1  error (pgresfunc_ERROR is set to error message)
+ *    0  connection opened to database "template1" (NULL passed to fn)
+ *    1  connection to real database opened successfully
+ */
+int openBackend(char *db) {
+   /* local variable */
+   int retval = -2;
+
+   /* initialize the backend connection parameters to NULL, which tells the
+    * back-end to check the environment for the values (see man libpq) */
+   pghost = NULL; pgport = NULL; 
+   pgoptions = NULL; pgtty = NULL;
+
+   /*
+    * If db value passed to function is NULL, open connection to
+    * "template1" database, which is presumed to exist on all functioning
+    * PostgreSQL installations.
+    * If db != NULL, then attempt to open connection to that database. 
+    */
+   if (db == (char *)NULL) {
+     if (pgdebug > 0)
+       fprintf(stderr, "openBackend(): " \
+		       "NULL pointer passed, opening template1.\n");
+     retval = 0;
+     conn = PQsetdb(pghost, pgport, pgoptions, pgtty, "template1");
+   }
+   else {
+     if (pgdebug > 0) 
+       fprintf(stderr, "openBackend(): opening connection to %s.\n", db);
+     conn = PQsetdb(pghost, pgport, pgoptions, pgtty, db);
+     retval = 1;
+   }
+   
+   if (pgdebug > 0)
+     fprintf(stderr, 
+             "openBackend(): PQdb() returned %s.\n", PQdb(conn));
+
+   /* check to see that the backend connection was made successfully */
+   if (PQstatus(conn) == CONNECTION_BAD) {
+     if (pgdebug > 0)
+       fprintf(stderr, "openBackend(): " \
+	       "Fatal Error. Connection to database %s failed.\n", db);
+     fprintf(stderr, "%s", PQerrorMessage(conn));
+     retval = -1;
+     pgresfunc_ERROR = PGRESFUNCERR_FATAL;
+   }
+
+   /* If retval is less than -1 then something has gone wrong (none of the
+    * above if statements have set retval */
+   if (retval < -1) {
+     if (pgdebug > 0)
+       fprintf(stderr, "openBackend(): No return value set!?\n");
+     retval = -1;
+     pgresfunc_ERROR = PGRESFUNCERR_INTERNAL;
+   }
+	
+   return retval;
+}
+
+void closeBackend()
+{
+   if (pgdebug)
+     fprintf(stderr, "closeBackend(): Closing backend connection.\n");
+   PQfinish(conn);
+}
+
+int processResult(PGresult *resloc)
+{
+  switch (PQresultStatus(resloc)) { /* man libpq says PQresultStatus returns
+  			   	     * only one of these values; however, I'm
+				     * not sure what all of them mean */
+  case (PGRES_EMPTY_QUERY): 
+    if (pgdebug)
+      fprintf(stderr, "processResult(): Query status PGRES_EMPTY_QUERY\n");
+    pgresfunc_ERROR = PGRESFUNCERR_QUERYFAILED;
+    return -1;
+  case (PGRES_COMMAND_OK): 	/* Query was INSERT, UPDATE, or DELETE */
+    if (pgdebug)
+      fprintf(stderr, "processResult(): Query status PGRES_COMMAND_OK\n");
+    return (atoi(PQcmdTuples(resloc))); /* Number of tuples affected by 
+					 * command */
+  case (PGRES_TUPLES_OK): 	/* Query was a SELECT */
+    if (pgdebug)
+      fprintf(stderr, "processResult(): Query status PGRES_TUPLES_OK\n");
+    return (PQntuples(resloc));    /* Number of tuples produced */
+  case (PGRES_COPY_OUT): 
+    if (pgdebug)
+      fprintf(stderr, "processResult(): Query status PGRES_COPY_OUT\n");
+    pgresfunc_ERROR = PGRESFUNCERR_QUERYFAILED;
+    return -1;
+  case (PGRES_COPY_IN): 
+    if (pgdebug)
+      fprintf(stderr, "processResult(): Query status PGRES_COPY_IN\n");
+    pgresfunc_ERROR = PGRESFUNCERR_QUERYFAILED;
+    return -1;
+  case (PGRES_BAD_RESPONSE): 
+    if (pgdebug)
+      fprintf(stderr, "processResult(): Query status PGRES_BAD_RESPONSE\n");
+    pgresfunc_ERROR = PGRESFUNCERR_QUERYFAILED;
+    return -1;
+  case (PGRES_NONFATAL_ERROR): 
+    if (pgdebug)
+      fprintf(stderr, "processResult(): Query status PGRES_NONFATAL_ERROR\n");
+    pgresfunc_ERROR = PGRESFUNCERR_QUERYFAILED;
+    return -1;
+  case (PGRES_FATAL_ERROR): 	/* A fatal error occurred in back-end */
+    /* Whoa! Always print error message when this occurs */
+    fprintf(stderr, "%s", PQresultErrorMessage(res));
+    if (pgdebug)
+      fprintf(stderr, "processResult(): Query status PGRES_FATAL_ERROR\n");
+    pgresfunc_ERROR = PGRESFUNCERR_FATAL;
+    return -1;
+  default:		/* back-end returned something it shouldn't */
+    if (pgdebug)
+      fprintf(stderr, "processResult(): Unknown query status\n");
+    pgresfunc_ERROR = PGRESFUNCERR_OTHERMISC;
+    return -1;
+  }
+}
+
+/*
+ * runQuery - run an arbitrary query, return a value
+ *
+ * -1: The query failed; pgresfunc_ERRNO set to some value explaining error
+ *  0: The query succeeded and returned no records
+ *  1: The query succeeded and returned one record
+ *  n: The query succeeded and returned n records (where n > 1)
+ */
+int runQuery(char *query)
+{
+  int n;
+  PGresult *result;
+
+  /* If the function was called with a NULL query argument */
+  if (query == NULL) {
+    pgresfunc_ERROR = PGRESFUNCERR_NULLQUERY;
+    return -1;
+  }
+
+  if (pgdebug)
+    fprintf(stderr, "runQuery(): Preparing to run SQL query:\n%s\n", query);
+
+  res = PQexec(conn, query);	/* Attempt to execute the query */
+  if (res == NULL) { 		/* back-end choked on query */
+    if (pgdebug) {
+      fprintf(stderr, "runQuery(): Query failed: %s\n", PQerrorMessage(conn));
+      fprintf(stderr, "Offending query was: %s\n", query);
+    }
+    PQclear(res);	/* Free the memory taken up by the res structure */
+    pgresfunc_ERROR = PGRESFUNCERR_BACKENDERR;
+    return -1;
+  }
+
+  if (pgdebug)
+    fprintf(stderr, "runQuery(): Backend appears to have handled query\n");
+  
+  return processResult(res);
+}
+
+void discardQuery()
+{
+  PQclear(res);
+  return;
+}
+
+void fetchAndDisplay(FILE *fp, char *curs)
+{
+  int retval;
+  char *query;
+  PGresult *reslocal;
+
+  if (pgdebug)
+    fprintf(stderr, "Entering function fetchAndDisplay()...\n");
+  asprintf(&query, "FETCH ALL in %s;", curs);
+  if (pgdebug)
+    fprintf(stderr, "Preparing to run query %s...\n", query);
+  reslocal = PQexec(conn, query);
+  retval = processResult(reslocal);
+  if (retval < 0) {
+    fprintf(stderr, "pgresfunc_ERROR set to %s\n", pgresfunc_ERROR);
+    PQclear(reslocal);
+    exit_nicely();
+  }
+  if (pgdebug)
+    fprintf(stderr, "Query fetched %d tuples\n", retval);
+
+  if (pgdebug)
+    fprintf(stderr, "About to call PQdisplayTuples()... \n");
+  PQdisplayTuples(reslocal, fp, 1, "|", 1, 1);
+  if (pgdebug)
+    fprintf(stderr, "Returned from call to PQdisplayTuples()\n");
+  PQclear(reslocal);
+  return;
+}
+
+/*
+ * fetchNext()
+ *
+ * Given the name of a cursor, fetches the next tuple
+ * Returns 1 on successful FETCH, 0 if no more records to fetch,
+ * -1 on error
+ */
+int fetchNext(char *curs)
+{
+  char query[1024];
+  short resultcode;
+
+  if (strlen(curs) > 80) {
+    fprintf(stderr, "fetchNext(): Cursor name suspiciously long!\n");
+    return -1;
+  }
+
+  sprintf(query, "FETCH FORWARD 1 IN %s;", curs);
+  return runQuery(query);
+/*  res = PQexec(conn, query);
+
+  return processResult(res); */
+
+}
+
+/*
+ * moveBack()
+ *
+ * Given the name of a cursor, fetches the previous tuple
+ * Returns 1 on success, 0 on failure, -1 on error
+ */
+int moveBack(int offset, char *curs)
+{
+  char query[1024];
+  short resultcode;
+
+  if (strlen(curs) > 80) {
+    fprintf(stderr, "moveBack(): Cursor name suspiciously long!\n");
+    return -1;
+  }
+  sprintf(query, "MOVE BACKWARD %d IN %s;", offset, curs);
+  res = PQexec(conn, query);
+  return processResult(res);
+}
+
+void startTransaction()
+{
+  PGresult* res;
+
+  if (pgdebug)
+    fprintf(stderr, "Entering startTransaction()\n");
+   /* start a transaction block */
+   res = PQexec(conn, "BEGIN WORK;");
+   if (PQresultStatus(res) != PGRES_COMMAND_OK) {
+     fprintf(stderr, "startTransaction(): BEGIN command failed.\n");
+     PQclear(res);
+     exit_nicely();
+   }
+   PQclear(res);
+
+   return;
+}
+
+void endTransaction()
+{
+   PGresult* res;
+
+   if (pgdebug)
+     fprintf(stderr, "Entering endTransaction()\n");
+   /* End the transaction */
+   res = PQexec(conn, "END WORK;");
+   PQclear(res);
+}
+
+void rollbackTransaction()
+{
+   PGresult* res;
+
+   if (pgdebug)
+     fprintf(stderr, "Entering rollbackTransaction()\n");
+   /* End the transaction */
+   res = PQexec(conn, "ABORT WORK;");
+   PQclear(res);
+}
+
+void exit_nicely()
+{
+  if (pgdebug)
+    fprintf(stderr, "exit_nicely(): Bailing out.\n");
+  PQfinish(conn);
+  exit(1);
+}
+
+/*
+ * getField()
+ *
+ * ASSUMES THAT res POINTS TO ONLY ONE TUPLE
+ */
+char *getField(char *fieldDesig)
+{
+  char *returnedDesig;
+  char fieldIndex;
+
+  fieldIndex = PQfnumber(res, fieldDesig);
+  if (fieldIndex == -1) {
+    fprintf(stderr, "getField(): Nonexistent field \"%s\".\n", fieldDesig);
+    exit (-1);
+  }
+/*  fprintf(stderr, "Field number is %d.\n", fieldIndex);  */
+  returnedDesig = PQgetvalue(res, 0, fieldIndex);
+/*  fprintf(stderr, "getField(): returning %s\n", returnedDesig); */
+  return returnedDesig;
+}

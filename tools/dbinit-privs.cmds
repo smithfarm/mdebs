@@ -1,0 +1,6 @@
+grant all on "fiscyear" to "foo";
+grant all on "chart" to "foo";
+grant all on "jou_head" to "foo";
+grant all on "jou_head_id_seq" to "foo";
+grant all on "jou_lines" to "foo";
+grant all on "shortcut" to "foo";

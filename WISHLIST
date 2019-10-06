@@ -1,0 +1,24 @@
+Things I'm missing in PostgreSQL
+================================
+
+The Question:
+-------------
+How can I rename a database?  (Other than dumping it, deleting it, and
+reloading it, that is)
+
+The Answer:
+-----------
+> (2) How does one rename a database?  Other than dump/destroydb/restore,
+> obviously.
+
+I think you can modify pg_database with new name, stop postmaster,
+rename database directory, and restart.  Not sure, but that may work.
+
+--
+  Bruce Momjian                        |  http://www.op.net/~candle
+  maillist@candle.pha.pa.us            |  (610) 853-3000
+  +  If your life is a hard drive,     |  830 Blythe Avenue
+  +  Christ can be your backup.        |  Drexel Hill, Pennsylvania 19026
+
+
+

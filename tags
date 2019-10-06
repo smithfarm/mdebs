@@ -1,0 +1,101 @@
+!_TAG_FILE_FORMAT	2	/extended format; --format=1 will not append ;" to lines/
+!_TAG_FILE_SORTED	1	/0=unsorted, 1=sorted, 2=foldcase/
+!_TAG_PROGRAM_AUTHOR	Darren Hiebert	/dhiebert@users.sourceforge.net/
+!_TAG_PROGRAM_NAME	Exuberant Ctags	//
+!_TAG_PROGRAM_URL	http://ctags.sourceforge.net	/official site/
+!_TAG_PROGRAM_VERSION	5.7	//
+NOOFQUERIES	dbinit.c	18;"	d	file:
+NathanConvertDate	generalized.c	/^int NathanConvertDate(char *pgdate)$/;"	f
+accountName	generalized.c	/^char *accountName(int acct1, int acct2)$/;"	f
+backslash_single_quotes	generalized.c	/^char *backslash_single_quotes(char *str)$/;"	f
+browse_tmp	generalized.c	/^void browse_tmp(char *tmpfilname)$/;"	f
+close_tmp	generalized.c	/^int close_tmp(FILE *fp)$/;"	f
+cmd	mdebs.y	/^cmd:	CMD_BYE '\\n' { $/;"	l
+countNonWhiteSpace	generalized.c	/^int countNonWhiteSpace(char *buff)$/;"	f
+dbQuery	generalized.c	/^int dbQuery(char *dbname)$/;"	f
+dbQueryfull	generalized.c	/^int dbQueryfull(char *dbname)$/;"	f
+dbinit_create	dbinit.c	/^void dbinit_create(char *db)$/;"	f
+dbname_to_lower	generalized.c	/^int dbname_to_lower(char *dbname)$/;"	f
+del_acc_by_num	mdebs.y	/^del_acc_by_num: CMD_DEL CMD_ACC TOK_ACCTNUM {$/;"	l
+delete_account_by_number	delete.c	/^int delete_account_by_number(int acct1, int acct2)$/;"	f
+delete_fiscal	delete.c	/^int delete_fiscal()$/;"	f
+delete_journal_entry	delete.c	/^int delete_journal_entry(int datum, int serial)$/;"	f
+delete_shortcut	delete.c	/^int delete_shortcut(int *code, char *desig)$/;"	f
+dum_acc	mdebs.y	/^dum_acc:  dum_acc_cmd $/;"	l
+dum_acc_cmd	mdebs.y	/^dum_acc_cmd: CMD_DUM CMD_ACC {$/;"	l
+dum_cha	mdebs.y	/^dum_cha:  CMD_DUM CMD_CHA $/;"	l
+dum_jou	mdebs.y	/^dum_jou:  dum_jou_cmd$/;"	l
+dum_jou_cmd	mdebs.y	/^dum_jou_cmd: CMD_DUM CMD_JOU {$/;"	l
+dump_account	dump.c	/^dump_account(const int mode, $/;"	f
+dump_all_to_file	dump.c	/^void dump_all_to_file(void)$/;"	f
+dump_chart	dump.c	/^void dump_chart(int mode, int acct, int anal)$/;"	f
+dump_journal	dump.c	/^dump_journal(const int mode, $/;"	f
+dump_shortcuts	dump.c	/^void dump_shortcuts(const int mode)$/;"	f
+fetchNextJournalEntry	dump.c	/^int fetchNextJournalEntry(struct journal_entry *jent, char *curs)$/;"	f
+get_regerror	generalized.c	/^char *get_regerror (int errcode, regex_t *compiled)$/;"	f
+header	mdebs.y	/^header: TOK_NUMBER TOK_STRING TOK_STRING '\\n' { $/;"	l
+i	main.c	/^int i, j, k, l, stopflag;$/;"	v
+init_jent	journal.c	/^void init_jent(struct journal_entry *jebuff)$/;"	f
+input	mdebs.y	/^input:	line {$/;"	l
+ins_cha	mdebs.y	/^ins_cha:  CMD_INS CMD_CHA TOK_ACCTNUM TOK_STRING {$/;"	l
+ins_db	mdebs.y	/^ins_db: CMD_INS CMD_DB$/;"	l
+ins_db_done	mdebs.y	/^ins_db_done:$/;"	l
+insert_chart	insert.c	/^int insert_chart(int acct1, int acct2, char *desig)$/;"	f
+insert_fiscal	insert.c	/^int insert_fiscal(int start_date, int end_date)$/;"	f
+insert_shortcut	insert.c	/^int insert_shortcut(char *shb)$/;"	f
+j	main.c	/^int i, j, k, l, stopflag;$/;"	v
+jent	main.c	/^struct journal_entry jent;$/;"	v	typeref:struct:journal_entry
+journal_entry	mdebs.y	/^journal_entry: header operation { }$/;"	l
+k	main.c	/^int i, j, k, l, stopflag;$/;"	v
+l	main.c	/^int i, j, k, l, stopflag;$/;"	v
+line	mdebs.y	/^line: 	cmd {$/;"	l
+main	main.c	/^int main(int argc, char **argv)$/;"	f
+mdebs_err	messages.c	/^void mdebs_err(const char *fmt, ...)$/;"	f
+mdebs_msg	messages.c	/^void mdebs_msg(const char *fmt, ...)$/;"	f
+mdebs_print_help	optproc.c	/^void mdebs_print_help()$/;"	f
+mdebs_print_version	optproc.c	/^void mdebs_print_version()$/;"	f
+mdebs_queryerr	messages.c	/^void mdebs_queryerr(char *quer, char *fname)$/;"	f
+mdebs_res	messages.c	/^void mdebs_res(FILE *fp, const char *fmt, ...)$/;"	f
+open_tmp	generalized.c	/^FILE *open_tmp(char **tmpfilname)$/;"	f
+operation	mdebs.y	/^operation: TOK_ACCTNUM TOK_NUMBER TOK_NUMBER '\\n' { $/;"	l
+parse_options	optproc.c	/^parse_options(argc, argv)$/;"	f
+pgConvertDate	generalized.c	/^char *pgConvertDate(int nathandate)$/;"	f
+power	generalized.c	/^int power(int base, int exponent)$/;"	f
+pri_acc	mdebs.y	/^pri_acc:  pri_acc_cmd $/;"	l
+pri_acc_cmd	mdebs.y	/^pri_acc_cmd: CMD_PRI CMD_ACC {$/;"	l
+pri_jou	mdebs.y	/^pri_jou:  pri_jou_cmd$/;"	l
+pri_jou_cmd	mdebs.y	/^pri_jou_cmd: CMD_PRI CMD_JOU {$/;"	l
+print_journal_entry	journal.c	/^void print_journal_entry (FILE *fp, struct journal_entry je)$/;"	f
+print_shortcut	dump.c	/^void print_shortcut(FILE *fp, struct short_cut *shp)$/;"	f
+print_tmp	generalized.c	/^void print_tmp(char *tmpfilname)$/;"	f
+processDumpedData	dump.c	/^void processDumpedData(const int mode, FILE *fp, char *fp_name)$/;"	f
+qualification	mdebs.y	/^qualification: '(' {$/;"	l
+que_fis	mdebs.y	/^que_fis: CMD_QUE CMD_FIS $/;"	l
+que_sho	mdebs.y	/^que_sho: CMD_QUE CMD_SHO TOK_NUMBER {$/;"	l
+query_account_by_regexp	query.c	/^int query_account_by_regexp(char *regexp)$/;"	f
+query_environment	generalized.c	/^char *query_environment()$/;"	f
+query_fiscal	query.c	/^struct date_range *query_fiscal(int flag)$/;"	f
+query_journal_entry	journal.c	/^query_journal_entry (int date, int serial)$/;"	f
+query_mdebsdb	generalized.c	/^int query_mdebsdb(void)$/;"	f
+query_serial_by_date	query.c	/^int query_serial_by_date(int thisdate)$/;"	f
+query_shortcut	query.c	/^query_shortcut(int *code, char *shb)$/;"	f
+remove_tmp	generalized.c	/^void remove_tmp(char *tmpfilname)$/;"	f
+s	main.c	/^char *s, t, u;$/;"	v
+setDateStyle	main.c	/^int setDateStyle(void)$/;"	f
+showDateStyle	main.c	/^int showDateStyle(void)$/;"	f
+stopflag	main.c	/^int i, j, k, l, stopflag;$/;"	v
+strntok	generalized.c	/^int strntok(char *stringy)$/;"	f
+t	main.c	/^char *s, t, u;$/;"	v
+theTimeIs	generalized.c	/^char *theTimeIs(void)$/;"	f
+to_bin	generalized.c	/^char *to_bin(char *ret, int i)$/;"	f
+to_bool	generalized.c	/^bool to_bool(char *val)$/;"	f
+transQuery	generalized.c	/^int transQuery(int date, int sernum)$/;"	f
+u	main.c	/^char *s, t, u;$/;"	v
+unbackslash_single_quotes	generalized.c	/^char *unbackslash_single_quotes(char *str)$/;"	f
+update_fiscal	insert.c	/^int update_fiscal(int start_date, int end_date)$/;"	f
+valiDate	generalized.c	/^int valiDate(int datum)$/;"	f
+verify_journal_entry	journal.c	/^int verify_journal_entry(struct journal_entry *je)$/;"	f
+verify_regexp	generalized.c	/^int verify_regexp(char *arg)$/;"	f
+version	version.c	/^char version[] = "mdebs - The Minimalistic Double-Entry Bookkeeping System, version " MDEBS_VERSION_NUMBER;$/;"	v
+write_journal_entry	journal.c	/^int write_journal_entry(struct journal_entry *rec)$/;"	f
+xmalloc	generalized.c	/^xmalloc (size_t size)$/;"	f
